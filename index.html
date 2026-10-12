@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pidgin Voice + Ademi Panel 👑</title>
+<title>Pidgin Voice 👑</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -29,15 +29,9 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 <div class="container">
 <div class="header">
 <h1>🎙️ Pidgin Voice</h1>
-<p id="subTitle">Record your sweet pidgin!</p>
+<p>Record your sweet pidgin!</p>
 </div>
 
-<div class="tabs">
-<button class="tab active" id="tabPublic" onclick="showTab('public')">🎤 Record</button>
-<button class="tab" id="tabAdemi" onclick="showTab('ademi')">👑 Ademi Panel</button>
-</div>
-
-<!-- PUBLIC TAB -->
 <div id="publicTab">
 <div class="card" style="text-align:center">
 <div style="width:100px;height:100px;background:#feca57;border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:40px" id="micIcon">🎤</div>
@@ -48,7 +42,6 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 <button class="btn" id="saveBtn" onclick="saveVoice()" style="background:#2ed573;color:white;display:none">💾 Save Voice</button>
 <audio id="preview" controls style="width:100%;margin-top:10px;display:none"></audio>
 </div>
-
 <div class="card">
 <h3>🔥 Recent Voices</h3>
 <input type="text" id="searchPublic" placeholder="🔍 Filter by name..." oninput="filterPublic()">
@@ -56,27 +49,25 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 </div>
 </div>
 
-<!-- ADEMI TAB -->
+<!-- HIDDEN ADEMI TAB - ONLY SHOWS WITH?chairman -->
 <div id="ademiTab" class="hidden">
 <div id="ademiLogin" class="card">
-<h3>🔐 Ademi Login</h3>
-<p style="font-size:12px;opacity:0.7">Password: ademi123</p>
-<input type="password" id="ademiPass" placeholder="Enter Ademi password">
+<h3>🔐 Chairman Only</h3>
+<input type="password" id="ademiPass" placeholder="Enter Chairman password">
 <button class="btn btn-record" onclick="ademiLogin()">Enter Kingdom 👑</button>
 <p id="loginMsg" style="color:#ff6b6b;text-align:center;margin-top:10px"></p>
 </div>
-
 <div id="ademiContent" class="hidden">
 <div class="card" style="text-align:center">
 <div class="stat"><h2 id="totalCount">0</h2><p>Total</p></div>
 <div class="stat"><h2 id="todayCount">0</h2><p>Today</p></div>
 <input type="text" id="searchBox" placeholder="🔍 Filter by name to delete..." oninput="filterVoices()">
 <button class="btn btn-admin" onclick="loadVoices()">🔄 Refresh</button>
-<button class="btn" onclick="deleteSelected()" style="background:#ff4757;color:white">🗑️ Delete Selected (Safe ID)</button>
+<button class="btn" onclick="deleteSelected()" style="background:#ff4757;color:white">🗑️ Delete Selected</button>
+<button class="btn btn-admin" onclick="showTab('public')">🔙 Back to Public</button>
 </div>
 <div class="card">
-<h3>👑 All Voices - Chairman Control</h3>
-<p style="font-size:11px;opacity:0.7">Filtering no go delete wrong voice again — e dey use ID</p>
+<h3>👑 Chairman Control</h3>
 <div id="voiceListAdemi">Loading...</div>
 </div>
 </div>
@@ -88,15 +79,18 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 const SUPABASE_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPABASE_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
 let mediaRecorder, audioChunks=[], audioBlob, isRecording=false, timerInt, seconds=0;
 let allVoices=[];
 
+// SECURITY: Only show Ademi if?chairman in URL
+const urlParams = new URLSearchParams(window.location.search);
+const isChairmanLink = urlParams.has('chairman');
+
 function showTab(t){
+if(t==='ademi' &&!isChairmanLink){ return; }
 document.getElementById('publicTab').classList.toggle('hidden', t!=='public');
 document.getElementById('ademiTab').classList.toggle('hidden', t!=='ademi');
-document.getElementById('tabPublic').classList.toggle('active', t==='public');
-document.getElementById('tabAdemi').classList.toggle('active', t==='ademi');
+if(t==='ademi') loadVoices();
 }
 
 async function toggleRecord(){
@@ -144,7 +138,7 @@ if(upErr) throw upErr;
 const {data:{publicUrl}}=supabaseClient.storage.from('voices').getPublicUrl(fileName);
 const {error:dbErr}=await supabaseClient.from('voices').insert([{name, audio_url:publicUrl}]);
 if(dbErr) throw dbErr;
-alert('✅ Saved forever! 🔥');
+alert('✅ Saved!');
 document.getElementById('saveBtn').style.display='none';
 document.getElementById('preview').style.display='none';
 document.getElementById('nameInput').value='';
@@ -195,11 +189,11 @@ renderPublic(allVoices.filter(v=>v.name.toLowerCase().includes(q)));
 }
 
 function ademiLogin(){
-if(document.getElementById('ademiPass').value==='ademi123'){
+if(document.getElementById('ademiPass').value==='Ademi@2026Secure!'){
 document.getElementById('ademiLogin').classList.add('hidden');
 document.getElementById('ademiContent').classList.remove('hidden');
 loadVoices();
-}else{document.getElementById('loginMsg').textContent='❌ Wrong! Try: ademi123';}
+}else{document.getElementById('loginMsg').textContent='❌ Wrong password!';}
 }
 
 async function deleteVoice(id,fileName){
@@ -210,18 +204,23 @@ await supabaseClient.from('voices').delete().eq('id',id);
 allVoices=allVoices.filter(v=>v.id!==id);
 filterVoices();
 filterPublic();
-document.getElementById('totalCount').textContent=allVoices.length;
 }catch(e){alert('Error: '+e.message);}
 }
 
 async function deleteSelected(){
 const checks=[...document.querySelectorAll('.del-check:checked')];
-if(!checks.length) return alert('No voice selected! Tick checkbox first');
+if(!checks.length) return alert('No voice selected!');
 if(!confirm(`Delete ${checks.length} voices forever?`)) return;
 for(let c of checks){
 try{ await supabaseClient.storage.from('voices').remove([c.dataset.file]); await supabaseClient.from('voices').delete().eq('id', c.value);}catch(e){}
 }
 loadVoices();
+}
+
+// AUTO-CHECK: If?chairman in URL, show Ademi Panel
+if(isChairmanLink){
+document.getElementById('publicTab').classList.add('hidden');
+document.getElementById('ademiTab').classList.remove('hidden');
 }
 
 loadVoices();
