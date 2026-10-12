@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pidgin Voice 👑</title>
+<title>Pidgin Voice 👑 AUTO</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -15,11 +15,8 @@ body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);m
 .btn-record{background:#feca57;color:#000;font-size:18px}
 .btn-stop{background:#ff4757;color:white;font-size:18px}
 .btn-admin{background:rgba(0,0,0,0.4);color:white;border:1px solid rgba(255,255,255,0.3)}
-input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:white;margin:8px 0}
+input,textarea,select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:white;margin:8px 0}
 .voice-item{background:rgba(255,255,255,0.08);border-radius:12px;padding:12px;margin:10px 0;display:flex;justify-content:space-between;align-items:center}
-.tabs{display:flex;gap:10px;margin:15px 0}
-.tab{flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;background:rgba(255,255,255,0.1);color:white;font-weight:600}
-.tab.active{background:#feca57;color:#000}
 .hidden{display:none}
 .stat{display:inline-block;background:rgba(0,0,0,0.3);padding:10px 20px;border-radius:10px;margin:5px;text-align:center}
 .stat h2{color:#feca57}
@@ -29,7 +26,8 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 <div class="container">
 <div class="header">
 <h1>🎙️ Pidgin Voice</h1>
-<p>Record your sweet pidgin!</p>
+<p>Talk am — AI go write am!</p>
+<p><a href="buy.html" style="color:#feca57;text-decoration:underline">Buy dataset 💰</a></p>
 </div>
 
 <div id="publicTab">
@@ -39,17 +37,19 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 <p style="opacity:0.8;margin:10px 0" id="timer">00:00</p>
 <button class="btn btn-record" id="recordBtn" onclick="toggleRecord()">Start Recording</button>
 <input type="text" id="nameInput" placeholder="Your name (e.g Ademi)" maxlength="20">
+<select id="locationInput"><option value="">Where you from?</option><option>Lagos</option><option>Warri</option><option>Port Harcourt</option><option>Abuja</option><option>Benin</option><option>Ibadan</option><option>Other</option></select>
+<textarea id="transcriptInput" placeholder="🤖 AI go write wetin you talk here automatically... you fit edit am!" rows="3"></textarea>
+<p id="aiStatus" style="font-size:12px;color:#feca57"></p>
+<label style="display:flex;gap:8px;align-items:center;font-size:13px;text-align:left;margin:8px 0"><input type="checkbox" id="consentInput" style="width:18px"> I gree make Ademi use my voice sell</label>
 <button class="btn" id="saveBtn" onclick="saveVoice()" style="background:#2ed573;color:white;display:none">💾 Save Voice</button>
 <audio id="preview" controls style="width:100%;margin-top:10px;display:none"></audio>
 </div>
 <div class="card">
 <h3>🔥 Recent Voices</h3>
-<input type="text" id="searchPublic" placeholder="🔍 Filter by name..." oninput="filterPublic()">
 <div id="voiceListPublic">Loading...</div>
 </div>
 </div>
 
-<!-- HIDDEN ADEMI TAB - ONLY SHOWS WITH?chairman -->
 <div id="ademiTab" class="hidden">
 <div id="ademiLogin" class="card">
 <h3>🔐 Chairman Only</h3>
@@ -59,170 +59,83 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 </div>
 <div id="ademiContent" class="hidden">
 <div class="card" style="text-align:center">
-<div class="stat"><h2 id="totalCount">0</h2><p>Total</p></div>
-<div class="stat"><h2 id="todayCount">0</h2><p>Today</p></div>
-<input type="text" id="searchBox" placeholder="🔍 Filter by name to delete..." oninput="filterVoices()">
+<div class="stat"><h2 id="totalCount">0</h2><p>Total</p></div><div class="stat"><h2 id="todayCount">0</h2><p>Today</p></div>
 <button class="btn btn-admin" onclick="loadVoices()">🔄 Refresh</button>
 <button class="btn" onclick="deleteSelected()" style="background:#ff4757;color:white">🗑️ Delete Selected</button>
-<button class="btn btn-admin" onclick="showTab('public')">🔙 Back to Public</button>
 </div>
-<div class="card">
-<h3>👑 Chairman Control</h3>
-<div id="voiceListAdemi">Loading...</div>
+<div class="card"><h3>👑 Chairman Control</h3><div id="voiceListAdemi">Loading...</div></div>
 </div>
 </div>
-</div>
-
 </div>
 
 <script>
 const SUPABASE_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPABASE_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let mediaRecorder, audioChunks=[], audioBlob, isRecording=false, timerInt, seconds=0;
-let allVoices=[];
+let mediaRecorder,audioChunks=[],audioBlob,isRecording=false,timerInt,seconds=0,allVoices=[],recognition=null;
+const urlParams=new URLSearchParams(window.location.search);
+const isChairmanLink=urlParams.has('chairman');
 
-// SECURITY: Only show Ademi if?chairman in URL
-const urlParams = new URLSearchParams(window.location.search);
-const isChairmanLink = urlParams.has('chairman');
-
-function showTab(t){
-if(t==='ademi' &&!isChairmanLink){ return; }
-document.getElementById('publicTab').classList.toggle('hidden', t!=='public');
-document.getElementById('ademiTab').classList.toggle('hidden', t!=='ademi');
-if(t==='ademi') loadVoices();
+// AUTO AI SETUP
+if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR(); recognition.continuous=true; recognition.interimResults=true; recognition.lang='en-NG';
+  recognition.onstart=()=>document.getElementById('aiStatus').textContent='🤖 AI dey listen...';
+  recognition.onresult=(e)=>{ let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript; document.getElementById('transcriptInput').value=t; document.getElementById('aiStatus').textContent='✍️ AI: '+t; };
+  recognition.onerror=(e)=>document.getElementById('aiStatus').textContent='Type manually: '+e.error;
 }
 
 async function toggleRecord(){
 if(!isRecording){
 try{
 const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-mediaRecorder=new MediaRecorder(stream);
-audioChunks=[];
+mediaRecorder=new MediaRecorder(stream); audioChunks=[];
 mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);
-mediaRecorder.onstop=()=>{
-audioBlob=new Blob(audioChunks,{type:'audio/webm'});
-document.getElementById('preview').src=URL.createObjectURL(audioBlob);
-document.getElementById('preview').style.display='block';
-document.getElementById('saveBtn').style.display='block';
-};
-mediaRecorder.start();
-isRecording=true;
-document.getElementById('recordBtn').textContent='⏹️ Stop Recording';
-document.getElementById('recordBtn').className='btn btn-stop';
-document.getElementById('status').textContent='🔴 Recording...';
-document.getElementById('micIcon').textContent='🔴';
-seconds=0;
-timerInt=setInterval(()=>{seconds++;document.getElementById('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;},1000);
+mediaRecorder.onstop=()=>{ audioBlob=new Blob(audioChunks,{type:'audio/webm'}); document.getElementById('preview').src=URL.createObjectURL(audioBlob); document.getElementById('preview').style.display='block'; document.getElementById('saveBtn').style.display='block'; };
+mediaRecorder.start(); isRecording=true;
+if(recognition) try{recognition.start();}catch(e){}
+document.getElementById('recordBtn').textContent='⏹️ Stop Recording'; document.getElementById('recordBtn').className='btn btn-stop';
+document.getElementById('status').textContent='🔴 Recording + AI dey write...'; document.getElementById('micIcon').textContent='🔴';
+seconds=0; timerInt=setInterval(()=>{seconds++; document.getElementById('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;},1000);
 }catch(e){alert('Mic error: '+e.message);}
 }else{
-mediaRecorder.stop();
-mediaRecorder.stream.getTracks().forEach(t=>t.stop());
-isRecording=false;
-clearInterval(timerInt);
-document.getElementById('recordBtn').textContent='🎤 Record Again';
-document.getElementById('recordBtn').className='btn btn-record';
-document.getElementById('status').textContent='✅ Preview your voice';
-document.getElementById('micIcon').textContent='✅';
+mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t=>t.stop()); isRecording=false; clearInterval(timerInt);
+if(recognition) try{recognition.stop();}catch(e){}
+document.getElementById('recordBtn').textContent='🎤 Record Again'; document.getElementById('recordBtn').className='btn btn-record';
+document.getElementById('status').textContent='✅ Done! Edit transcript if need'; document.getElementById('micIcon').textContent='✅';
+document.getElementById('aiStatus').textContent='✅ Edit am if need before save';
 }
 }
 
 async function saveVoice(){
 const name=document.getElementById('nameInput').value.trim()||'Anonymous';
-if(!audioBlob){alert('Record first!');return;}
+const transcript=document.getElementById('transcriptInput').value.trim();
+const location=document.getElementById('locationInput').value;
+const consent=document.getElementById('consentInput').checked;
+if(!audioBlob) return alert('Record first!'); if(!transcript) return alert('Wait for AI to write or type am!'); if(!consent) return alert('Tick consent box!');
 document.getElementById('saveBtn').textContent='⏳ Saving...';
 try{
 const fileName=`${Date.now()}-${Math.random().toString(36).substr(2,9)}.webm`;
-const {error:upErr}=await supabaseClient.storage.from('voices').upload(fileName,audioBlob);
-if(upErr) throw upErr;
+const {error:upErr}=await supabaseClient.storage.from('voices').upload(fileName,audioBlob); if(upErr) throw upErr;
 const {data:{publicUrl}}=supabaseClient.storage.from('voices').getPublicUrl(fileName);
-const {error:dbErr}=await supabaseClient.from('voices').insert([{name, audio_url:publicUrl}]);
-if(dbErr) throw dbErr;
-alert('✅ Saved!');
-document.getElementById('saveBtn').style.display='none';
-document.getElementById('preview').style.display='none';
-document.getElementById('nameInput').value='';
-document.getElementById('status').textContent='Ready to record';
-document.getElementById('timer').textContent='00:00';
-document.getElementById('micIcon').textContent='🎤';
-loadVoices();
-}catch(e){alert('Error: '+e.message);document.getElementById('saveBtn').textContent='💾 Save Voice';}
+const {error:dbErr}=await supabaseClient.from('voices').insert([{name,audio_url:publicUrl,transcript,location,consent}]); if(dbErr) throw dbErr;
+alert('✅ Saved with auto-transcript!'); location.reload();
+}catch(e){alert('Error:'+e.message); document.getElementById('saveBtn').textContent='💾 Save Voice';}
 }
 
 async function loadVoices(){
-try{
-const {data,error}=await supabaseClient.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
-if(error) throw error;
-allVoices=data;
-const today=new Date().toDateString();
-if(document.getElementById('totalCount')){
+const {data}=await supabaseClient.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
+if(!data) return; allVoices=data;
 document.getElementById('totalCount').textContent=data.length;
-document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===today).length;
-}
-renderPublic(data);
-renderAdemi(data);
-}catch(e){document.getElementById('voiceListPublic').innerHTML='Error: '+e.message;}
+document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===new Date().toDateString()).length;
+document.getElementById('voiceListPublic').innerHTML=data.map(v=>`<div class="voice-item"><div style="flex:1"><b>${v.name}</b> - ${v.location||''}<br><small>${v.transcript||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:32px;margin-top:5px"></audio></div></div>`).join('') || '<p>No voices yet</p>';
+document.getElementById('voiceListAdemi').innerHTML=data.map(v=>{const fn=v.audio_url.split('/').pop().split('?')[0]; return `<div class="voice-item"><div style="flex:1;display:flex;gap:8px"><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check" style="width:18px;height:18px"><div><b>${v.name}</b> (${v.location})<br><i>${v.transcript}</i><br><audio controls src="${v.audio_url}" style="width:180px;height:30px"></audio></div></div><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px">🗑️</button></div>`}).join('');
 }
 
-function renderPublic(list){
-const html=list.length?list.map(v=>{
-return `<div class="voice-item"><div style="flex:1"><b>${v.name}</b><br><small style="opacity:0.6">${new Date(v.created_at).toLocaleString()}</small><br><audio controls src="${v.audio_url}" style="width:100%;max-width:220px;height:32px;margin-top:5px"></audio></div></div>`;
-}).join(''):'<p>No voices yet</p>';
-document.getElementById('voiceListPublic').innerHTML=html;
-}
-
-function renderAdemi(list){
-const html=list.length?list.map(v=>{
-const fn=v.audio_url.split('/').pop().split('?')[0];
-return `<div class="voice-item"><div style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check" style="width:18px;height:18px;margin-top:4px"><div><b>${v.name}</b><br><small style="opacity:0.6">${new Date(v.created_at).toLocaleString()}</small><br><audio controls src="${v.audio_url}" style="width:200px;height:30px;margin-top:5px"></audio></div></div><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">🗑️</button></div>`;
-}).join(''):'<p>No voices match filter</p>';
-document.getElementById('voiceListAdemi').innerHTML=html;
-}
-
-function filterVoices(){
-const q=document.getElementById('searchBox').value.toLowerCase();
-renderAdemi(allVoices.filter(v=>v.name.toLowerCase().includes(q)));
-}
-function filterPublic(){
-const q=document.getElementById('searchPublic').value.toLowerCase();
-renderPublic(allVoices.filter(v=>v.name.toLowerCase().includes(q)));
-}
-
-function ademiLogin(){
-if(document.getElementById('ademiPass').value==='Ademi@2026Secure!'){
-document.getElementById('ademiLogin').classList.add('hidden');
-document.getElementById('ademiContent').classList.remove('hidden');
-loadVoices();
-}else{document.getElementById('loginMsg').textContent='❌ Wrong password!';}
-}
-
-async function deleteVoice(id,fileName){
-if(!confirm('Delete forever Chairman?'))return;
-try{
-await supabaseClient.storage.from('voices').remove([fileName]);
-await supabaseClient.from('voices').delete().eq('id',id);
-allVoices=allVoices.filter(v=>v.id!==id);
-filterVoices();
-filterPublic();
-}catch(e){alert('Error: '+e.message);}
-}
-
-async function deleteSelected(){
-const checks=[...document.querySelectorAll('.del-check:checked')];
-if(!checks.length) return alert('No voice selected!');
-if(!confirm(`Delete ${checks.length} voices forever?`)) return;
-for(let c of checks){
-try{ await supabaseClient.storage.from('voices').remove([c.dataset.file]); await supabaseClient.from('voices').delete().eq('id', c.value);}catch(e){}
-}
-loadVoices();
-}
-
-// AUTO-CHECK: If?chairman in URL, show Ademi Panel
-if(isChairmanLink){
-document.getElementById('publicTab').classList.add('hidden');
-document.getElementById('ademiTab').classList.remove('hidden');
-}
-
+function ademiLogin(){if(document.getElementById('ademiPass').value==='Ademi@2026Secure!'){document.getElementById('ademiLogin').classList.add('hidden');document.getElementById('ademiContent').classList.remove('hidden');loadVoices();}else document.getElementById('loginMsg').textContent='❌ Wrong';}
+async function deleteVoice(id,fn){if(!confirm('Delete?'))return; await supabaseClient.storage.from('voices').remove([fn]); await supabaseClient.from('voices').delete().eq('id',id); loadVoices();}
+async function deleteSelected(){const checks=[...document.querySelectorAll('.del-check:checked')]; if(!checks.length) return alert('No selected!'); if(!confirm(`Delete ${checks.length}?`)) return; for(let c of checks){ await supabaseClient.storage.from('voices').remove([c.dataset.file]); await supabaseClient.from('voices').delete().eq('id',c.value);} loadVoices();}
+if(isChairmanLink){document.getElementById('publicTab').classList.add('hidden');document.getElementById('ademiTab').classList.remove('hidden');}
 loadVoices();
 </script>
 </body>
