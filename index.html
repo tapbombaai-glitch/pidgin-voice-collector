@@ -1,87 +1,22 @@
-// --- AUTOMATIC AI INSPECTOR ---
-function inspectPidginQuality(transcript, duration) {
-  if(!transcript || duration < 3) return {score: 10, verdict: 'REJECT - Too short/silent 🔴'};
-  let score = 50;
-  const pidginWords = ['how far','shey','abeg','walahi','na','dey','yarn','gist','omo','wey','abi','ehn','chook','waka','chop','gbege','yawa','gbas gbos','wetin','una','make we','i dey','you dey','no be','no dey','pidgin','naija','lagos','warri'];
-  let pidginCount = 0;
-  let low = transcript.toLowerCase();
-  pidginWords.forEach(w => { if(low.includes(w)) pidginCount++; });
-  score += pidginCount * 8; // more pidgin = higher score
-  if(duration >= 10 && duration <= 90) score += 20;
-  if(duration > 90) score += 10;
-  if(transcript.split(' ').length < 4) score -= 30;
-  if(score > 100) score = 95 + Math.floor(Math.random()*5);
-  if(score < 0) score = 5;
-  let verdict = '';
-  if(score >= 85) verdict = 'EXCELLENT - Auto Approve 🟢';
-  else if(score >= 60) verdict = 'GOOD - Check am 🟡';
-  else verdict = 'POOR - Maybe reject 🔴';
-  return {score, verdict};
-}
-
-async function loadVoices(){
-  const {data} = await supabaseClient.from('voices').select('*').order('quality_score',{ascending:false}).order('created_at',{ascending:false}).limit(200);
-  if(!data) return;
-  document.getElementById('totalCount').textContent=data.length;
-  document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===new Date().toDateString()).length;
-  // PUBLIC VIEW - Keep simple
-  document.getElementById('voiceListPublic').innerHTML=data.map(v=>`<div style="background:rgba(255,255,255,0.08);padding:10px;border-radius:10px;margin:8px 0"><b>${v.name}</b> - ${v.location||''} ${v.quality_score?`(${v.quality_score}%)`:''}<br><small>${v.transcript||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:32px;margin-top:5px"></audio></div>`).join('');
-
-  // ADEMI PANEL - AUTO SORTED BY AI SCORE!
-  document.getElementById('voiceListAdemi').innerHTML=
-  `<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="filterVoices('all')" class="btn" style="padding:6px;background:white;color:black">All</button><button onclick="filterVoices('excellent')" class="btn" style="padding:6px;background:#2ed573;color:white">🟢 Excellent</button><button onclick="filterVoices('good')" class="btn" style="padding:6px;background:#ffa502">🟡 Good</button><button onclick="filterVoices('poor')" class="btn" style="padding:6px;background:#ff4757">🔴 Poor</button></div>` +
-  data.map(v=>{
-    const fn=v.audio_url.split('/').pop().split('?')[0];
-    let bg = 'rgba(255,255,255,0.08)';
-    if(v.quality_score>=85) bg='rgba(46,213,115,0.2)';
-    else if(v.quality_score>=60) bg='rgba(255,165,2,0.2)';
-    else if(v.quality_score>0 && v.quality_score<60) bg='rgba(255,71,87,0.2)';
-    return `<div class="voice-item" data-score="${v.quality_score||0}" style="background:${bg};padding:10px;border-radius:10px;margin:8px 0;display:flex;justify-content:space-between;border-left:5px solid ${v.quality_score>=85?'#2ed573':v.quality_score>=60?'#ffa502':'#ff4757'}"><div style="flex:1"><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check"> <b>${v.name}</b> (${v.location}) - <b>${v.quality_score||0}%</b><br><small style="color:#feca57">${v.ai_verdict||'Not inspected yet'}</small><br><i style="font-size:12px">${v.transcript}</i><br><audio controls src="${v.audio_url}" style="width:100%;height:28px;margin-top:5px"></audio><small>${v.duration_seconds||0}s</small></div><div><button onclick="approveVoice('${v.id}')" style="background:#2ed573;color:white;border:none;padding:6px 10px;border-radius:6px;margin-bottom:5px;width:100%">✅</button><br><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px;width:100%">🗑️</button></div></div>`;
-  }).join('');
-}
-
-function filterVoices(type){
-  document.querySelectorAll('.voice-item').forEach(el=>{
-    let s=parseInt(el.dataset.score);
-    if(type==='all') el.style.display='flex';
-    else if(type==='excellent') el.style.display = s>=85? 'flex' : 'none';
-    else if(type==='good') el.style.display = (s>=60 && s<85)? 'flex' : 'none';
-    else if(type==='poor') el.style.display = (s>0 && s<60)? 'flex' : 'none';
-  });
-}
-
-async function approveVoice(id){
-  await supabaseClient.from('voices').update({ai_verdict:'APPROVED BY ADEMI ✅'}).eq('id',id);
-  alert('Approved!'); loadVoices();
-}
-
-// UPDATE SAVE FUNCTION TO AUTO-INSPECT
-async function saveVoice(){
-  const name=document.getElementById('nameInput').value.trim()||'Anonymous';
-  const transcript=document.getElementById('transcriptInput').value.trim();
-  const userLocation=document.getElementById('locationInput').value;
-  const consent=document.getElementById('consentInput').checked;
-  if(!audioBlob) return alert('Record first!');
-  if(!transcript) return alert('Type transcript!');
-  if(!consent) return alert('Tick consent!');
-  document.getElementById('saveBtn').textContent='🤖 AI dey inspect...';
-
-  // AI INSPECTOR RUNS HERE!
-  let inspection = inspectPidginQuality(transcript, seconds);
-
-  try{
-    const fileName=`${Date.now()}.webm`;
-    const {error:upErr}=await supabaseClient.storage.from('voices').upload(fileName,audioBlob);
-    if(upErr) throw upErr;
-    const {data:{publicUrl}}=supabaseClient.storage.from('voices').getPublicUrl(fileName);
-    const {error:dbErr}=await supabaseClient.from('voices').insert([{
-      name, audio_url:publicUrl, transcript, location:userLocation, consent,
-      quality_score: inspection.score,
-      ai_verdict: inspection.verdict,
-      duration_seconds: seconds
-    }]);
-    if(dbErr) throw dbErr;
-    alert(`✅ Saved! AI Score: ${inspection.score}% - ${inspection.verdict}`);
-    location.reload();
-  }catch(e){alert(e.message); document.getElementById('saveBtn').textContent='💾 Save';}
-}
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Pidgin Voice</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;color:#fff;padding:10px}.c{max-width:600px;margin:auto}.card{background:rgba(255,255,255,.12);border-radius:16px;padding:14px;margin:10px 0;border:1px solid rgba(255,255,255,.2)}.btn{width:100%;padding:12px;border-radius:10px;border:none;font-weight:700;margin:6px 0}input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff;margin:6px 0}.h{display:none}.g{background:#2ed573}.r{background:#ff4757;color:#fff}.y{background:#feca57;color:#000}</style></head><body><div class="c">
+<h2 style="text-align:center">🎙️ Pidgin Voice</h2>
+<div class="card" id="annBox"><b>📢 From Ademi</b><div id="annList" style="font-size:13px;margin-top:6px">Loading...</div></div>
+<div class="card" style="text-align:center;background:linear-gradient(135deg,#2ed573,#17a589)"><h3>🗣️ Gist & Earn ₦500</h3><select id="topic"><option value="market">Market</option><option value="football">Football</option><option value="family">Family</option><option value="lagos">Lagos Life</option></select><button class="btn y" onclick="findPartner()">🔍 Find Partner</button><p id="mStat" style="font-size:12px"></p></div>
+<div id="pub"><div class="card" style="text-align:center"><div style="width:80px;height:80px;background:#feca57;border-radius:50%;margin:auto;display:flex;align-items:center;justify-content:center;font-size:35px">🎤</div><h3 id="st">Ready</h3><p id="tm">00:00</p><button class="btn y" id="recBtn" onclick="rec()">Start Rec</button><input id="nm" placeholder="Your name"><select id="loc"><option value="">Location</option><option>Lagos</option><option>Warri</option><option>PH</option><option>Abuja</option><option>Benin</option></select><textarea id="tr" rows="2" placeholder="AI transcript..."></textarea><label style="font-size:12px"><input type="checkbox" id="cs" style="width:16px"> I agree</label><button class="btn g" id="svBtn" onclick="save()" style="display:none">💾 Save</button><audio id="aud" controls style="width:100%;display:none"></audio></div><div class="card"><h4>Recent</h4><div id="listP">Loading...</div></div></div>
+<div id="adm" class="h"><div id="admLogin" class="card"><input type="password" id="pass" placeholder="Password"><button class="btn y" onclick="aLogin()">Enter 👑</button></div><div id="admMain" class="h"><div class="card"><h4>📢 Post Announcement</h4><input id="aT" placeholder="Title"><textarea id="aM" rows="2" placeholder="Message"></textarea><button class="btn y" onclick="postA()">Post Now</button><div id="aListA" style="font-size:12px;margin-top:8px"></div></div><div class="card"><div style="display:flex;gap:5px"><button class="btn" style="padding:5px;background:#fff;color:#000" onclick="filterA('all')">All</button><button class="btn" style="padding:5px;background:#2ed573" onclick="filterA('good')">🟢 Good</button><button class="btn" style="padding:5px;background:#ff4757" onclick="filterA('bad')">🔴 Bad</button></div><div id="listA">Loading...</div></div></div></div>
+</div><script>
+const URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";const KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";const sb=supabase.createClient(URL,KEY);
+let mr,blobs=[],isRec=false,tInt,sec=0,recog=null,finalT='';
+function aiScore(txt,s){if(!txt||s<3)return{sc:10,v:'REJECT 🔴'};let sc=50;let words=['how far','shey','abeg','na','dey','omo','wey','abi','wetin','una','walahi','yarn','gist','waka','chop'];let c=0;let l=txt.toLowerCase();words.forEach(w=>{if(l.includes(w))c++});sc+=c*8;if(s>=10)sc+=20;if(txt.split(' ').length<4)sc-=20;if(sc>100)sc=98;let v=sc>=75?'GOOD 🟢':sc>=45?'FAIR 🟡':'POOR 🔴';return{sc,v}}
+function initAI(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;recog=new SR();recog.continuous=true;recog.interimResults=true;recog.lang='en-US';recog.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalT+=e.results[i][0].transcript+' ';else t+=e.results[i][0].transcript;}document.getElementById('tr').value=finalT+t;}}initAI();
+async function rec(){if(!isRec){finalT='';document.getElementById('tr').value='';let stream=await navigator.mediaDevices.getUserMedia({audio:true});if(recog)try{recog.start()}catch{};mr=new MediaRecorder(stream);blobs=[];mr.ondataavailable=e=>blobs.push(e.data);mr.onstop=()=>{let b=new Blob(blobs,{type:'audio/webm'});window.ab=b;document.getElementById('aud').src=URL.createObjectURL(b);document.getElementById('aud').style.display='block';document.getElementById('svBtn').style.display='block';};mr.start();isRec=true;document.getElementById('recBtn').textContent='Stop';document.getElementById('recBtn').className='btn r';sec=0;tInt=setInterval(()=>{sec++;document.getElementById('tm').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`},1000)}else{if(recog)try{recog.stop()}catch{};mr.stop();mr.stream.getTracks().forEach(t=>t.stop());isRec=false;clearInterval(tInt);document.getElementById('recBtn').textContent='Rec Again';document.getElementById('recBtn').className='btn y'}}
+async function save(){let name=document.getElementById('nm').value||'Anonymous';let tr=document.getElementById('tr').value;let loc=document.getElementById('loc').value;let cs=document.getElementById('cs').checked;if(!window.ab)return alert('Record first');if(!tr)return alert('Transcript empty');if(!cs)return alert('Tick agree');document.getElementById('svBtn').textContent='AI checking...';let ins=aiScore(tr,sec);let fn=Date.now()+'.webm';let {error}=await sb.storage.from('voices').upload(fn,window.ab);if(error)return alert(error.message);let {data:{publicUrl}}=sb.storage.from('voices').getPublicUrl(fn);await sb.from('voices').insert([{name,audio_url:publicUrl,transcript:tr,location:loc,consent:cs,quality_score:ins.sc,ai_verdict:ins.v,duration_seconds:sec}]);alert(`Saved! AI: ${ins.sc}% ${ins.v}`);location.reload()}
+async function load(){let {data}=await sb.from('voices').select('*').order('quality_score',{ascending:false}).limit(100);if(!data)return;document.getElementById('listP').innerHTML=data.map(v=>`<div style="background:rgba(0,0,0,.2);padding:8px;border-radius:8px;margin:6px 0;font-size:13px"><b>${v.name}</b> ${v.quality_score||0}%<br><small>${v.transcript?.slice(0,60)}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:28px"></audio></div>`).join('');document.getElementById('listA').innerHTML=data.map(v=>{let col=v.quality_score>=75?'#2ed573':v.quality_score>=45?'#ffa502':'#ff4757';return `<div class="vItem" data-sc="${v.quality_score||0}" style="background:rgba(0,0,0,.2);padding:8px;border-radius:8px;margin:6px 0;border-left:4px solid ${col};font-size:12px"><input type="checkbox" value="${v.id}"> <b>${v.name}</b> - ${v.quality_score||0}% - ${v.ai_verdict||''}<br>${v.transcript?.slice(0,50)}<br><audio controls src="${v.audio_url}" style="width:100%;height:24px"></audio></div>`}).join('')}
+async function loadAnn(){let {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(10);if(!data||!data.length){document.getElementById('annList').innerHTML='No announcements yet';return}document.getElementById('annList').innerHTML=data.map(a=>`<div style="background:rgba(0,0,0,.3);padding:6px;border-radius:6px;margin:4px 0"><b>${a.title}</b><br><small>${a.message}</small></div>`).join('');document.getElementById('aListA').innerHTML=data.map(a=>`<div>${a.title} <button onclick="delA('${a.id}')" style="background:#ff4757;color:#fff;border:none;padding:2px 6px;border-radius:4px">X</button></div>`).join('')}
+function aLogin(){if(document.getElementById('pass').value==='Ademi@2026Secure!'){document.getElementById('admLogin').classList.add('h');document.getElementById('admMain').classList.remove('h');load()}else alert('Wrong')}
+async function postA(){let t=document.getElementById('aT').value;let m=document.getElementById('aM').value;if(!t||!m)return alert('Fill both');await sb.from('announcements').insert([{title:t,message:m}]);alert('Posted!');loadAnn()}
+async function delA(id){await sb.from('announcements').delete().eq('id',id);loadAnn()}
+function filterA(type){document.querySelectorAll('.vItem').forEach(e=>{let s=parseInt(e.dataset.sc);if(type==='all')e.style.display='block';else if(type==='good')e.style.display=s>=60?'block':'none';else e.style.display=s<60?'block':'none'})}
+async function findPartner(){let topic=document.getElementById('topic').value;let name=document.getElementById('nm').value||'Anon';if(!name)return alert('Put name');document.getElementById('mStat').textContent='Searching...';let {data}=await sb.from('conversation_queue').select('*').eq('topic',topic).limit(1);if(data&&data.length){let room='room_'+Date.now();await sb.from('conversation_rooms').insert([{id:room,user_A:data[0].user_id,user_B:name,topic,status:'matched'}]);await sb.from('conversation_queue').delete().eq('id',data[0].id);location.href='room.html?id='+room}else{await sb.from('conversation_queue').insert([{user_id:name,topic}]);document.getElementById('mStat').textContent='In queue, wait 10s...';setInterval(async()=>{let {data:r}=await sb.from('conversation_rooms').select('*').eq('user_B',name).eq('status','matched').limit(1);if(r&&r.length)location.href='room.html?id='+r[0].id},4000)}}
+if(new URLSearchParams(location.search).has('chairman')){document.getElementById('pub').classList.add('h');document.getElementById('adm').classList.remove('h')}load();loadAnn();
+</script></body></html>
