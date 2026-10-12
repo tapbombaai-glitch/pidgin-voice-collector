@@ -1,35 +1,87 @@
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Pidgin Voice 👑</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;color:white;padding:15px}.container{max-width:600px;margin:0 auto}.header{text-align:center;padding:20px 0}.card{background:rgba(255,255,255,0.12);backdrop-filter:blur(10px);border-radius:20px;padding:20px;margin:15px 0;border:1px solid rgba(255,255,255,0.2)}.btn{padding:14px;width:100%;border-radius:12px;border:none;font-weight:700;cursor:pointer;margin:8px 0}.btn-record{background:#feca57;color:#000;font-size:18px}.btn-stop{background:#ff4757;color:white;font-size:18px}input,textarea,select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:white;margin:8px 0}.hidden{display:none}.stat{display:inline-block;background:rgba(0,0,0,0.3);padding:10px 20px;border-radius:10px;margin:5px;text-align:center}.stat h2{color:#feca57}</style>
-</head><body><div class="container"><div class="header"><h1>🎙️ Pidgin Voice</h1><p>Talk am — AI go write am!</p><p><a href="buy.html" style="color:#feca57">Buy dataset 💰</a></p></div>
+// --- AUTOMATIC AI INSPECTOR ---
+function inspectPidginQuality(transcript, duration) {
+  if(!transcript || duration < 3) return {score: 10, verdict: 'REJECT - Too short/silent 🔴'};
+  let score = 50;
+  const pidginWords = ['how far','shey','abeg','walahi','na','dey','yarn','gist','omo','wey','abi','ehn','chook','waka','chop','gbege','yawa','gbas gbos','wetin','una','make we','i dey','you dey','no be','no dey','pidgin','naija','lagos','warri'];
+  let pidginCount = 0;
+  let low = transcript.toLowerCase();
+  pidginWords.forEach(w => { if(low.includes(w)) pidginCount++; });
+  score += pidginCount * 8; // more pidgin = higher score
+  if(duration >= 10 && duration <= 90) score += 20;
+  if(duration > 90) score += 10;
+  if(transcript.split(' ').length < 4) score -= 30;
+  if(score > 100) score = 95 + Math.floor(Math.random()*5);
+  if(score < 0) score = 5;
+  let verdict = '';
+  if(score >= 85) verdict = 'EXCELLENT - Auto Approve 🟢';
+  else if(score >= 60) verdict = 'GOOD - Check am 🟡';
+  else verdict = 'POOR - Maybe reject 🔴';
+  return {score, verdict};
+}
 
-<div id="announceCard" class="card" style="border:1px solid #feca57"><h3>📢 From Ademi <span id="newBadge" style="background:#ff4757;padding:2px 8px;border-radius:10px;font-size:12px;display:none">NEW</span></h3><div id="announceList">Loading...</div></div>
+async function loadVoices(){
+  const {data} = await supabaseClient.from('voices').select('*').order('quality_score',{ascending:false}).order('created_at',{ascending:false}).limit(200);
+  if(!data) return;
+  document.getElementById('totalCount').textContent=data.length;
+  document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===new Date().toDateString()).length;
+  // PUBLIC VIEW - Keep simple
+  document.getElementById('voiceListPublic').innerHTML=data.map(v=>`<div style="background:rgba(255,255,255,0.08);padding:10px;border-radius:10px;margin:8px 0"><b>${v.name}</b> - ${v.location||''} ${v.quality_score?`(${v.quality_score}%)`:''}<br><small>${v.transcript||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:32px;margin-top:5px"></audio></div>`).join('');
 
-<div class="card" style="text-align:center;background:linear-gradient(135deg,#2ed573,#17a589)"><h2>🗣️ Gist With Person, Earn ₦500!</h2><p>Talk 90 mins Pidgin</p><select id="topicSelect"><option value="market">Market Gist</option><option value="football">Football</option><option value="family">Family</option><option value="lagos_life">Lagos Life</option></select><button class="btn" onclick="findPartner()" style="background:white;color:black;margin-top:10px">🔍 Find Partner</button><p id="matchStatus" style="font-size:13px;min-height:18px"></p></div>
+  // ADEMI PANEL - AUTO SORTED BY AI SCORE!
+  document.getElementById('voiceListAdemi').innerHTML=
+  `<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="filterVoices('all')" class="btn" style="padding:6px;background:white;color:black">All</button><button onclick="filterVoices('excellent')" class="btn" style="padding:6px;background:#2ed573;color:white">🟢 Excellent</button><button onclick="filterVoices('good')" class="btn" style="padding:6px;background:#ffa502">🟡 Good</button><button onclick="filterVoices('poor')" class="btn" style="padding:6px;background:#ff4757">🔴 Poor</button></div>` +
+  data.map(v=>{
+    const fn=v.audio_url.split('/').pop().split('?')[0];
+    let bg = 'rgba(255,255,255,0.08)';
+    if(v.quality_score>=85) bg='rgba(46,213,115,0.2)';
+    else if(v.quality_score>=60) bg='rgba(255,165,2,0.2)';
+    else if(v.quality_score>0 && v.quality_score<60) bg='rgba(255,71,87,0.2)';
+    return `<div class="voice-item" data-score="${v.quality_score||0}" style="background:${bg};padding:10px;border-radius:10px;margin:8px 0;display:flex;justify-content:space-between;border-left:5px solid ${v.quality_score>=85?'#2ed573':v.quality_score>=60?'#ffa502':'#ff4757'}"><div style="flex:1"><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check"> <b>${v.name}</b> (${v.location}) - <b>${v.quality_score||0}%</b><br><small style="color:#feca57">${v.ai_verdict||'Not inspected yet'}</small><br><i style="font-size:12px">${v.transcript}</i><br><audio controls src="${v.audio_url}" style="width:100%;height:28px;margin-top:5px"></audio><small>${v.duration_seconds||0}s</small></div><div><button onclick="approveVoice('${v.id}')" style="background:#2ed573;color:white;border:none;padding:6px 10px;border-radius:6px;margin-bottom:5px;width:100%">✅</button><br><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px;width:100%">🗑️</button></div></div>`;
+  }).join('');
+}
 
-<div id="publicTab"><div class="card" style="text-align:center"><div style="width:100px;height:100px;background:#feca57;border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:40px" id="micIcon">🎤</div><h2 id="status">Ready</h2><p id="timer">00:00</p><button class="btn btn-record" id="recordBtn" onclick="toggleRecord()">Start Recording</button><input id="nameInput" placeholder="Your name"><select id="locationInput"><option value="">Where you from?</option><option>Lagos</option><option>Warri</option><option>Port Harcourt</option><option>Abuja</option><option>Benin</option><option>Other</option></select><textarea id="transcriptInput" placeholder="AI go write here..." rows="3"></textarea><p id="aiStatus" style="font-size:12px;color:#feca57">✅ AI ready</p><label style="display:flex;gap:8px;font-size:13px"><input type="checkbox" id="consentInput" style="width:18px"> I gree make Ademi use my voice</label><button class="btn" id="saveBtn" onclick="saveVoice()" style="background:#2ed573;color:white;display:none">💾 Save</button><audio id="preview" controls style="width:100%;display:none"></audio></div><div class="card"><h3>🔥 Recent</h3><div id="voiceListPublic">Loading...</div></div></div>
+function filterVoices(type){
+  document.querySelectorAll('.voice-item').forEach(el=>{
+    let s=parseInt(el.dataset.score);
+    if(type==='all') el.style.display='flex';
+    else if(type==='excellent') el.style.display = s>=85? 'flex' : 'none';
+    else if(type==='good') el.style.display = (s>=60 && s<85)? 'flex' : 'none';
+    else if(type==='poor') el.style.display = (s>0 && s<60)? 'flex' : 'none';
+  });
+}
 
-<div id="ademiTab" class="hidden"><div id="ademiLogin" class="card"><h3>🔐 Chairman Only</h3><input type="password" id="ademiPass" placeholder="Password"><button class="btn btn-record" onclick="ademiLogin()">Enter 👑</button><p id="loginMsg" style="color:#ff6b6b"></p></div><div id="ademiContent" class="hidden"><div class="card" style="text-align:center"><div class="stat"><h2 id="totalCount">0</h2><p>Total</p></div><div class="stat"><h2 id="todayCount">0</h2><p>Today</p></div><button class="btn" onclick="deleteSelected()" style="background:#ff4757;color:white">🗑️ Delete</button></div>
+async function approveVoice(id){
+  await supabaseClient.from('voices').update({ai_verdict:'APPROVED BY ADEMI ✅'}).eq('id',id);
+  alert('Approved!'); loadVoices();
+}
 
-<div class="card" style="border:2px solid #feca57"><h3>📢 Post Announcement (Chairman Only)</h3><input id="annTitle" placeholder="Title e.g New Payment Update"><textarea id="annMsg" placeholder="Message to all users..." rows="3"></textarea><label style="display:flex;gap:8px;font-size:13px;margin:8px 0"><input type="checkbox" id="annPin" style="width:18px"> Pin to top 📌</label><button class="btn" onclick="postAnnounce()" style="background:#feca57;color:black">📢 Post Now</button><button class="btn" onclick="loadAnnouncements()" style="background:rgba(255,255,255,0.2)">🔄 Refresh Announcements</button><div id="adminAnnList" style="margin-top:10px"></div></div>
+// UPDATE SAVE FUNCTION TO AUTO-INSPECT
+async function saveVoice(){
+  const name=document.getElementById('nameInput').value.trim()||'Anonymous';
+  const transcript=document.getElementById('transcriptInput').value.trim();
+  const userLocation=document.getElementById('locationInput').value;
+  const consent=document.getElementById('consentInput').checked;
+  if(!audioBlob) return alert('Record first!');
+  if(!transcript) return alert('Type transcript!');
+  if(!consent) return alert('Tick consent!');
+  document.getElementById('saveBtn').textContent='🤖 AI dey inspect...';
 
-<div class="card"><div id="voiceListAdemi">Loading...</div></div></div></div></div>
-<script>
-const SUPABASE_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";const SUPABASE_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let mediaRecorder,audioChunks=[],audioBlob,isRecording=false,timerInt,seconds=0,recognition=null,finalTranscript='';
-const urlParams=new URLSearchParams(window.location.search);const isChairmanLink=urlParams.has('chairman');
-function initAI(){const hasAI='webkitSpeechRecognition' in window||'SpeechRecognition' in window;if(!hasAI){document.getElementById('aiStatus').textContent='Use Chrome';return;}const SR=window.SpeechRecognition||window.webkitSpeechRecognition;recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang='en-US';recognition.onresult=(e)=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalTranscript+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript;}document.getElementById('transcriptInput').value=finalTranscript+interim;};}initAI();
-async function toggleRecord(){if(!isRecording){finalTranscript='';document.getElementById('transcriptInput').value='';const stream=await navigator.mediaDevices.getUserMedia({audio:true});if(recognition)try{recognition.start();}catch{}mediaRecorder=new MediaRecorder(stream);audioChunks=[];mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=()=>{audioBlob=new Blob(audioChunks,{type:'audio/webm'});document.getElementById('preview').src=URL.createObjectURL(audioBlob);document.getElementById('preview').style.display='block';document.getElementById('saveBtn').style.display='block';};mediaRecorder.start();isRecording=true;document.getElementById('recordBtn').textContent='Stop';document.getElementById('recordBtn').className='btn btn-stop';seconds=0;timerInt=setInterval(()=>{seconds++;document.getElementById('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;},1000);}else{if(recognition)try{recognition.stop();}catch{}mediaRecorder.stop();mediaRecorder.stream.getTracks().forEach(t=>t.stop());isRecording=false;clearInterval(timerInt);document.getElementById('recordBtn').textContent='Record Again';document.getElementById('recordBtn').className='btn btn-record';}}
-async function saveVoice(){const name=document.getElementById('nameInput').value.trim()||'Anonymous';const transcript=document.getElementById('transcriptInput').value.trim();const userLocation=document.getElementById('locationInput').value;const consent=document.getElementById('consentInput').checked;if(!audioBlob) return alert('Record first!');if(!transcript) return alert('Type transcript!');if(!consent) return alert('Tick consent!');document.getElementById('saveBtn').textContent='Saving...';try{const fileName=`${Date.now()}.webm`;const {error:upErr}=await supabaseClient.storage.from('voices').upload(fileName,audioBlob);if(upErr)throw upErr;const {data:{publicUrl}}=supabaseClient.storage.from('voices').getPublicUrl(fileName);const {error:dbErr}=await supabaseClient.from('voices').insert([{name,audio_url:publicUrl,transcript,location:userLocation,consent}]);if(dbErr)throw dbErr;alert('Saved!');location.reload();}catch(e){alert(e.message);document.getElementById('saveBtn').textContent='Save';}}
-async function loadVoices(){const {data}=await supabaseClient.from('voices').select('*').order('created_at',{ascending:false}).limit(100);if(!data)return;document.getElementById('totalCount').textContent=data.length;document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===new Date().toDateString()).length;document.getElementById('voiceListPublic').innerHTML=data.map(v=>`<div style="background:rgba(255,255,255,0.08);padding:10px;border-radius:10px;margin:8px 0"><b>${v.name}</b> - ${v.location||''}<br><small>${v.transcript||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:32px;margin-top:5px"></audio></div>`).join('');document.getElementById('voiceListAdemi').innerHTML=data.map(v=>{const fn=v.audio_url.split('/').pop().split('?')[0];return `<div style="background:rgba(255,255,255,0.08);padding:10px;border-radius:10px;margin:8px 0;display:flex;justify-content:space-between"><div><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check"> <b>${v.name}</b> (${v.location})<br><i>${v.transcript}</i></div><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px">🗑️</button></div>`}).join('');}
-function ademiLogin(){if(document.getElementById('ademiPass').value==='Ademi@2026Secure!'){document.getElementById('ademiLogin').classList.add('hidden');document.getElementById('ademiContent').classList.remove('hidden');loadVoices();loadAnnouncements();}else document.getElementById('loginMsg').textContent='Wrong';}
-async function deleteVoice(id,fn){if(!confirm('Delete?'))return;await supabaseClient.storage.from('voices').remove([fn]);await supabaseClient.from('voices').delete().eq('id',id);loadVoices();}
-async function deleteSelected(){const checks=[...document.querySelectorAll('.del-check:checked')];if(!checks.length) return alert('No selected!');if(!confirm(`Delete ${checks.length}?`))return;for(let c of checks){await supabaseClient.storage.from('voices').remove([c.dataset.file]);await supabaseClient.from('voices').delete().eq('id',c.value);}loadVoices();}
-async function loadAnnouncements(){const {data}=await supabaseClient.from('announcements').select('*').order('is_pinned',{ascending:false}).order('created_at',{ascending:false}).limit(20);if(!data||!data.length){document.getElementById('announceList').innerHTML='<small>No announcements yet</small>';return;}document.getElementById('announceList').innerHTML=data.map(a=>`<div style="background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;margin:8px 0;border-left:4px solid ${a.is_pinned?'#feca57':'#2ed573'}">${a.is_pinned?'📌 ':''}<b>${a.title}</b><br><small>${a.message}</small></div>`).join('');document.getElementById('newBadge').style.display='inline';const adminList=document.getElementById('adminAnnList');if(adminList)adminList.innerHTML=data.map(a=>`<div style="background:rgba(0,0,0,0.3);padding:8px;border-radius:8px;margin:5px 0;display:flex;justify-content:space-between"><span><b>${a.title}</b> - ${a.message.slice(0,30)}</span><button onclick="delAnn('${a.id}')" style="background:#ff4757;color:white;border:none;padding:4px 8px;border-radius:5px">X</button></div>`).join('');}
-async function postAnnounce(){const title=document.getElementById('annTitle').value.trim();const message=document.getElementById('annMsg').value.trim();const is_pinned=document.getElementById('annPin').checked;if(!title||!message)return alert('Fill title and message!');const {error}=await supabaseClient.from('announcements').insert([{title,message,is_pinned}]);if(error)alert(error.message);else{alert('✅ Posted! Everybody go see am now!');document.getElementById('annTitle').value='';document.getElementById('annMsg').value='';loadAnnouncements();}}
-async function delAnn(id){if(!confirm('Delete announcement?'))return;await supabaseClient.from('announcements').delete().eq('id',id);loadAnnouncements();}
-async function findPartner(){const topic=document.getElementById('topicSelect').value;const name=document.getElementById('nameInput').value.trim()||'Anonymous';if(!name)return alert('Put your name first!');document.getElementById('matchStatus').textContent='🔍 Searching for partner...';const {data:waiting}=await supabaseClient.from('conversation_queue').select('*').eq('topic',topic).limit(1);if(waiting&&waiting.length>0){const roomId='room_'+Date.now();await supabaseClient.from('conversation_rooms').insert([{id:roomId,user_A:waiting[0].user_id,user_B:name,topic,status:'matched'}]);await supabaseClient.from('conversation_queue').delete().eq('id',waiting[0].id);location.href=`room.html?id=${roomId}`;}else{await supabaseClient.from('conversation_queue').insert([{user_id:name,topic}]);document.getElementById('matchStatus').textContent='✅ You don enter queue! Wait for partner...';setInterval(async()=>{const {data:rooms}=await supabaseClient.from('conversation_rooms').select('*').eq('user_B',name).eq('status','matched').limit(1);if(rooms&&rooms.length>0)location.href=`room.html?id=${rooms[0].id}`;},5000);}}
-if(isChairmanLink){document.getElementById('publicTab').classList.add('hidden');document.getElementById('ademiTab').classList.remove('hidden');}
-loadVoices();loadAnnouncements();
-</script></body></html>
+  // AI INSPECTOR RUNS HERE!
+  let inspection = inspectPidginQuality(transcript, seconds);
+
+  try{
+    const fileName=`${Date.now()}.webm`;
+    const {error:upErr}=await supabaseClient.storage.from('voices').upload(fileName,audioBlob);
+    if(upErr) throw upErr;
+    const {data:{publicUrl}}=supabaseClient.storage.from('voices').getPublicUrl(fileName);
+    const {error:dbErr}=await supabaseClient.from('voices').insert([{
+      name, audio_url:publicUrl, transcript, location:userLocation, consent,
+      quality_score: inspection.score,
+      ai_verdict: inspection.verdict,
+      duration_seconds: seconds
+    }]);
+    if(dbErr) throw dbErr;
+    alert(`✅ Saved! AI Score: ${inspection.score}% - ${inspection.verdict}`);
+    location.reload();
+  }catch(e){alert(e.message); document.getElementById('saveBtn').textContent='💾 Save';}
+}
