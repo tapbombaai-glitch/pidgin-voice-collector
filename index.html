@@ -1,67 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pidgin Voice Collector 🇳🇬</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎙️ Naija Pidgin Voice - $2/hr</title>
 <style>
-body{background:#000;color:#fff;text-align:center;padding:20px;font-family:sans-serif}
-button{padding:18px 35px;margin:10px;border-radius:12px;border:0;font-size:19px;font-weight:bold}
-#rec{background:#ff0000;color:#fff} #save{background:#00ff00;color:#000}
-#sen{font-size:26px;color:#ffcc00;display:block;margin:25px 0;min-height:60px}
-audio{width:100%;margin:15px 0}
-#st{color:#0f0;font-size:18px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:Arial;text-align:center;padding:20px;min-height:100vh}
+h1{font-size:28px;margin-bottom:10px;color:#FFD700}
+.subtitle{color:#aaa;margin-bottom:20px}
+.card{background:#111;border:1px solid #333;border-radius:15px;padding:25px;max-width:400px;margin:0 auto 20px}
+#sen{font-size:26px;font-weight:bold;color:#00FF88;margin:20px 0;min-height:70px;display:flex;align-items:center;justify-content:center;border:2px dashed #333;border-radius:10px;padding:15px}
+button{width:100%;padding:18px;margin:8px 0;font-size:19px;border-radius:12px;border:none;font-weight:bold;cursor:pointer}
+#rec{background:#FF0000;color:white}
+#rec.recording{background:#880000;animation:pulse 1s infinite}
+#save{background:#00C853;color:white}
+#save:disabled{background:#333;color:#666}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:20px 0}
+.stat{background:#222;padding:12px;border-radius:10px}
+.stat span{display:block;font-size:20px;font-weight:bold;color:#FFD700}
+audio{width:100%;margin-top:15px}
+.sell-box{background:linear-gradient(135deg,#FFD700,#FFA500);color:#000;padding:15px;border-radius:12px;margin-top:20px;font-weight:bold;display:none}
+.sell-box a{color:#000;text-decoration:underline}
+.footer{margin-top:20px;font-size:13px;color:#666}
 </style>
 </head>
 <body>
-<h1>🎤 Record Pidgin Voice 🇳🇬</h1>
-<p>Help build FIRST Naija Pidgin AI! 🙏</p>
-<b id="sen">Omo, I don tire!</b>
-<br>
+
+<h1>🎙️ Record Pidgin Voice</h1>
+<p class="subtitle">Help build FIRST Naija Pidgin AI - Get Paid!</p>
+
+<div class="card">
+<div id="sen">Omo, I don tire!</div>
+
 <button id="rec">🔴 RECORD (5 sec)</button>
 <button id="save" disabled>💾 SAVE VOICE</button>
-<br>
+
 <audio id="aud" controls></audio>
-<p id="st"></p>
-<p>Voices you don record: <b id="cnt">0</b></p>
+
+<div class="stats">
+<div class="stat"><span id="cnt">0</span>Clips</div>
+<div class="stat"><span id="total">0.0 mins</span>Time</div>
+<div class="stat"><span id="dollars">$0</span><small style="font-size:12px;color:#fff">₦<span id="naira">0</span></small></div>
+</div>
+
+<div id="sell" class="sell-box">
+✅ You don reach <span id="hours">0</span>hr!<br>
+Sell am for $<span id="sellD">0</span> (₦<span id="sellN">0</span>)<br><br>
+<a href="https://wa.me/2348012345678?text=I%20want%20to%20sell%20my%20Pidgin%20voice%20dataset" target="_blank">📲 CLICK TO SELL ON WHATSAPP →</a><br><br>
+<a href="https://huggingface.co/datasets" target="_blank">🌍 OR UPLOAD TO HUGGINGFACE →</a>
+</div>
+</div>
+
+<p class="footer">💰 $2 per hour = ₦2,660 | You get ₦500 for every 100 clips<br>Recorder saves as .webm - Send to admin on WhatsApp to get paid</p>
+
 <script>
-const S=["Omo, I don tire!","Wetin dey sup?","How far na?","My people, you never see anything yet!","Abeg comment NEXT for episode 2!","Shey you don chop?","Na wa o!","I no understand wetin dey happen","Make we go house","This story sweet die!","You don see am?","No be small thing o!","Omo na so e take happen!","Abeg no vex","I dey come now now","Wetin be that?","You too much!","Na true you talk!","I swear e sweet!","Chai!"];
-let idx=0, mr, blob, chunks=[];
-let total=localStorage.getItem('pCnt')||0;
+let idx=0,mr,blob,chunks=[];
+let total=parseInt(localStorage.getItem('pCnt')||0);
+let sentences=["Omo, I don tire!","Wetin dey happen?","How far na?","I dey come now","No wahala at all","Shey you dey whine me?","I no understand","Make we go jare","How much be that?","Abeg come","Na so e be","You too much","I swear to God","E don tey","Where you dey?","Oga calm down","My guy how far?","I dey house","Come chop","Money don finish"];
 document.getElementById('cnt').innerText=total;
-document.getElementById('sen').innerText=S[0];
-navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
- mr=new MediaRecorder(s);
- mr.ondataavailable=e=>chunks.push(e.data);
- mr.onstop=()=>{
-  blob=new Blob(chunks,{type:'audio/webm'});
-  document.getElementById('aud').src=URL.createObjectURL(blob);
-  document.getElementById('save').disabled=false;
-  chunks=[];
- };
-}).catch(()=>{document.getElementById('st').innerText="❌ Abeg allow mic permission!";});
-document.getElementById('rec').onclick=()=>{
- if(!mr)return;
- document.getElementById('rec').innerText="⏺️ Recording... talk now!";
- document.getElementById('st').innerText="🎙️ Listening...";
- mr.start();
- setTimeout(()=>{
-  mr.stop();
-  document.getElementById('rec').innerText="🔴 RECORD AGAIN";
-  idx=(idx+1)%S.length;
-  document.getElementById('sen').innerText=S[idx];
-  document.getElementById('st').innerText="✅ Recorded! Preview am, then SAVE!";
- },5000);
+document.getElementById('sen').innerText=sentences[idx%sentences.length];
+function updateMoney(){
+let mins=(total*5/60).toFixed(1);
+let hours=(total*5/3600).toFixed(2);
+let dollars=(hours*2).toFixed(2);
+let naira=Math.floor(dollars*1330);
+document.getElementById('total').innerText=mins+" mins";
+document.getElementById('dollars').innerText="$"+dollars;
+document.getElementById('naira').innerText=naira;
+document.getElementById('cnt').innerText=total;
+if(hours>=0.1){
+document.getElementById('sell').style.display="block";
+document.getElementById('hours').innerText=hours;
+document.getElementById('sellD').innerText=dollars;
+document.getElementById('sellN').innerText=naira;
+}
+}
+updateMoney();
+document.getElementById('rec').onclick=async()=>{
+try{
+let s=await navigator.mediaDevices.getUserMedia({audio:true});
+mr=new MediaRecorder(s);chunks=[];
+mr.ondataavailable=e=>chunks.push(e.data);
+mr.onstop=()=>{
+blob=new Blob(chunks,{type:'audio/webm'});
+document.getElementById('aud').src=URL.createObjectURL(blob);
+document.getElementById('save').disabled=false;
+s.getTracks().forEach(t=>t.stop());
+};
+mr.start();
+let btn=document.getElementById('rec');
+btn.innerText="⏺️ Recording... 5s";btn.classList.add('recording');
+setTimeout(()=>{mr.stop();btn.innerText="🔴 RECORD (5 sec)";btn.classList.remove('recording');},5000);
+}catch(e){alert("Abeg allow microphone! 🙏");}
 };
 document.getElementById('save').onclick=()=>{
- const a=document.createElement('a');
- a.href=URL.createObjectURL(blob);
- a.download=`pidgin_${Date.now()}.webm`;
- a.click();
- total++;
- localStorage.setItem('pCnt',total);
- document.getElementById('cnt').innerText=total;
- document.getElementById('st').innerText="✅ Saved to your phone! God bless! ❤️ Next sentence don show!";
- document.getElementById('save').disabled=true;
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download=`pidgin_${Date.now()}.webm`;a.click();
+total++;localStorage.setItem('pCnt',total);
+idx++;document.getElementById('sen').innerText=sentences[idx%sentences.length];
+updateMoney();document.getElementById('save').disabled=true;
 };
 </script>
 </body>
