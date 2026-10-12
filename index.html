@@ -51,6 +51,7 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 
 <div class="card">
 <h3>🔥 Recent Voices</h3>
+<input type="text" id="searchPublic" placeholder="🔍 Filter by name..." oninput="filterPublic()">
 <div id="voiceListPublic">Loading...</div>
 </div>
 </div>
@@ -69,10 +70,13 @@ input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,2
 <div class="card" style="text-align:center">
 <div class="stat"><h2 id="totalCount">0</h2><p>Total</p></div>
 <div class="stat"><h2 id="todayCount">0</h2><p>Today</p></div>
+<input type="text" id="searchBox" placeholder="🔍 Filter by name to delete..." oninput="filterVoices()">
 <button class="btn btn-admin" onclick="loadVoices()">🔄 Refresh</button>
+<button class="btn" onclick="deleteSelected()" style="background:#ff4757;color:white">🗑️ Delete Selected (Safe ID)</button>
 </div>
 <div class="card">
 <h3>👑 All Voices - Chairman Control</h3>
+<p style="font-size:11px;opacity:0.7">Filtering no go delete wrong voice again — e dey use ID</p>
 <div id="voiceListAdemi">Loading...</div>
 </div>
 </div>
@@ -86,13 +90,13 @@ const SUPABASE_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let mediaRecorder, audioChunks=[], audioBlob, isRecording=false, timerInt, seconds=0;
+let allVoices=[];
 
 function showTab(t){
 document.getElementById('publicTab').classList.toggle('hidden', t!=='public');
 document.getElementById('ademiTab').classList.toggle('hidden', t!=='ademi');
 document.getElementById('tabPublic').classList.toggle('active', t==='public');
 document.getElementById('tabAdemi').classList.toggle('active', t==='ademi');
-if(t==='public') loadVoices();
 }
 
 async function toggleRecord(){
@@ -153,20 +157,41 @@ loadVoices();
 
 async function loadVoices(){
 try{
-const {data,error}=await supabaseClient.from('voices').select('*').order('created_at',{ascending:false}).limit(50);
+const {data,error}=await supabaseClient.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
 if(error) throw error;
+allVoices=data;
 const today=new Date().toDateString();
 if(document.getElementById('totalCount')){
 document.getElementById('totalCount').textContent=data.length;
 document.getElementById('todayCount').textContent=data.filter(v=>new Date(v.created_at).toDateString()===today).length;
 }
-const html=data.length?data.map(v=>{
-const fn=v.audio_url.split('/').pop();
-return `<div class="voice-item"><div style="flex:1"><b>${v.name}</b><br><small style="opacity:0.6">${new Date(v.created_at).toLocaleString()}</small><br><audio controls src="${v.audio_url}" style="width:100%;max-width:200px;height:30px;margin-top:5px"></audio></div><div>${document.getElementById('ademiContent')&&!document.getElementById('ademiContent').classList.contains('hidden')?`<button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">🗑️</button>`:''}</div></div>`;
+renderPublic(data);
+renderAdemi(data);
+}catch(e){document.getElementById('voiceListPublic').innerHTML='Error: '+e.message;}
+}
+
+function renderPublic(list){
+const html=list.length?list.map(v=>{
+return `<div class="voice-item"><div style="flex:1"><b>${v.name}</b><br><small style="opacity:0.6">${new Date(v.created_at).toLocaleString()}</small><br><audio controls src="${v.audio_url}" style="width:100%;max-width:220px;height:32px;margin-top:5px"></audio></div></div>`;
 }).join(''):'<p>No voices yet</p>';
 document.getElementById('voiceListPublic').innerHTML=html;
-if(document.getElementById('voiceListAdemi')) document.getElementById('voiceListAdemi').innerHTML=html;
-}catch(e){document.getElementById('voiceListPublic').innerHTML='Error: '+e.message;}
+}
+
+function renderAdemi(list){
+const html=list.length?list.map(v=>{
+const fn=v.audio_url.split('/').pop().split('?')[0];
+return `<div class="voice-item"><div style="flex:1;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" value="${v.id}" data-file="${fn}" class="del-check" style="width:18px;height:18px;margin-top:4px"><div><b>${v.name}</b><br><small style="opacity:0.6">${new Date(v.created_at).toLocaleString()}</small><br><audio controls src="${v.audio_url}" style="width:200px;height:30px;margin-top:5px"></audio></div></div><button onclick="deleteVoice('${v.id}','${fn}')" style="background:#ff4757;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer">🗑️</button></div>`;
+}).join(''):'<p>No voices match filter</p>';
+document.getElementById('voiceListAdemi').innerHTML=html;
+}
+
+function filterVoices(){
+const q=document.getElementById('searchBox').value.toLowerCase();
+renderAdemi(allVoices.filter(v=>v.name.toLowerCase().includes(q)));
+}
+function filterPublic(){
+const q=document.getElementById('searchPublic').value.toLowerCase();
+renderPublic(allVoices.filter(v=>v.name.toLowerCase().includes(q)));
 }
 
 function ademiLogin(){
@@ -182,8 +207,21 @@ if(!confirm('Delete forever Chairman?'))return;
 try{
 await supabaseClient.storage.from('voices').remove([fileName]);
 await supabaseClient.from('voices').delete().eq('id',id);
-loadVoices();
+allVoices=allVoices.filter(v=>v.id!==id);
+filterVoices();
+filterPublic();
+document.getElementById('totalCount').textContent=allVoices.length;
 }catch(e){alert('Error: '+e.message);}
+}
+
+async function deleteSelected(){
+const checks=[...document.querySelectorAll('.del-check:checked')];
+if(!checks.length) return alert('No voice selected! Tick checkbox first');
+if(!confirm(`Delete ${checks.length} voices forever?`)) return;
+for(let c of checks){
+try{ await supabaseClient.storage.from('voices').remove([c.dataset.file]); await supabaseClient.from('voices').delete().eq('id', c.value);}catch(e){}
+}
+loadVoices();
 }
 
 loadVoices();
