@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pidgin Voice Collector 🇳🇬</title>
+<style>
+body{background:#000;color:#fff;text-align:center;padding:20px;font-family:sans-serif}
+button{padding:18px 35px;margin:10px;border-radius:12px;border:0;font-size:19px;font-weight:bold}
+#rec{background:#ff0000;color:#fff} #save{background:#00ff00;color:#000}
+#sen{font-size:26px;color:#ffcc00;display:block;margin:25px 0;min-height:60px}
+audio{width:100%;margin:15px 0}
+#st{color:#0f0;font-size:18px}
+</style>
+</head>
+<body>
+<h1>🎤 Record Pidgin Voice 🇳🇬</h1>
+<p>Help build FIRST Naija Pidgin AI! 🙏</p>
+<b id="sen">Omo, I don tire!</b>
+<br>
+<button id="rec">🔴 RECORD (5 sec)</button>
+<button id="save" disabled>💾 SAVE VOICE</button>
+<br>
+<audio id="aud" controls></audio>
+<p id="st"></p>
+<p>Voices you don record: <b id="cnt">0</b></p>
+<script>
+const S=["Omo, I don tire!","Wetin dey sup?","How far na?","My people, you never see anything yet!","Abeg comment NEXT for episode 2!","Shey you don chop?","Na wa o!","I no understand wetin dey happen","Make we go house","This story sweet die!","You don see am?","No be small thing o!","Omo na so e take happen!","Abeg no vex","I dey come now now","Wetin be that?","You too much!","Na true you talk!","I swear e sweet!","Chai!"];
+let idx=0, mr, blob, chunks=[];
+let total=localStorage.getItem('pCnt')||0;
+document.getElementById('cnt').innerText=total;
+document.getElementById('sen').innerText=S[0];
+navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+ mr=new MediaRecorder(s);
+ mr.ondataavailable=e=>chunks.push(e.data);
+ mr.onstop=()=>{
+  blob=new Blob(chunks,{type:'audio/webm'});
+  document.getElementById('aud').src=URL.createObjectURL(blob);
+  document.getElementById('save').disabled=false;
+  chunks=[];
+ };
+}).catch(()=>{document.getElementById('st').innerText="❌ Abeg allow mic permission!";});
+document.getElementById('rec').onclick=()=>{
+ if(!mr)return;
+ document.getElementById('rec').innerText="⏺️ Recording... talk now!";
+ document.getElementById('st').innerText="🎙️ Listening...";
+ mr.start();
+ setTimeout(()=>{
+  mr.stop();
+  document.getElementById('rec').innerText="🔴 RECORD AGAIN";
+  idx=(idx+1)%S.length;
+  document.getElementById('sen').innerText=S[idx];
+  document.getElementById('st').innerText="✅ Recorded! Preview am, then SAVE!";
+ },5000);
+};
+document.getElementById('save').onclick=()=>{
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download=`pidgin_${Date.now()}.webm`;
+ a.click();
+ total++;
+ localStorage.setItem('pCnt',total);
+ document.getElementById('cnt').innerText=total;
+ document.getElementById('st').innerText="✅ Saved to your phone! God bless! ❤️ Next sentence don show!";
+ document.getElementById('save').disabled=true;
+};
+</script>
+</body>
+</html>
