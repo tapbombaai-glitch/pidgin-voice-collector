@@ -1,36 +1,135 @@
-<!-- ADD THIS FOR USER TO SEE APPROVED HOURS - CHAIRMAN FEATURE -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ademi Pidgin Voice - User Page</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;background:#0f0c29;color:#fff;padding:12px}
+.card{background:rgba(255,255,255,.1);border-radius:14px;padding:14px;margin:12px 0;border:1px solid rgba(255,255,255,.15)}
+.btn{padding:12px;border-radius:10px;border:none;font-weight:800;width:100%;margin:6px 0;font-size:15px;cursor:pointer}
+input,textarea,select{width:100%;padding:12px;border-radius:10px;background:rgba(0,0,0,.4);color:#fff;border:1px solid #555;margin:6px 0}
+.h{display:none!important}
+</style>
+</head>
+<body>
+<h2 style="text-align:center">🎙️ Ademi Pidgin Voice</h2>
+<p style="text-align:center;font-size:12px;opacity:.7">Record Pidgin, Get Approved Hours</p>
+
+<!-- ANNOUNCEMENT BOARD -->
+<div id="annBoard" style="background:linear-gradient(135deg,#feca57,#ff9f43);color:#000;padding:12px;border-radius:12px;margin:12px 0;display:none">
+<h4 style="text-align:center">📢 Chairman Announcement</h4>
+<div id="annListUser" style="margin-top:8px"></div>
+</div>
+
+<!-- MY APPROVED HOURS CARD -->
 <div id="myHoursCard" style="background:linear-gradient(135deg,#667eea,#764ba2);padding:14px;border-radius:14px;margin:12px 0;color:#fff;border:2px solid yellow;display:none">
 <h4 style="text-align:center">⏱️ My Approved Hours</h4>
 <p id="myHoursText" style="text-align:center;font-size:14px;margin:8px 0">Calculating...</p>
 <div id="myHoursBreakdown" style="font-size:12px"></div>
 </div>
+
+<div class="card">
+<h4>👤 Your Name (for Hours Tracking)</h4>
+<input id="userName" placeholder="Enter your name e.g Adiam" oninput="localStorage.setItem('pidgin_user_name',this.value)">
+</div>
+
+<div class="card">
+<h4>🎙️ Record Your Pidgin</h4>
+<input id="vName" placeholder="Voice title e.g Market Pidgin">
+<textarea id="vTranscript" rows="3" placeholder="TYPE your Pidgin here - important for audit! e.g: How far, my name na Adiam, I dey for Port Harcourt..."></textarea>
+<select id="vLoc"><option>Port Harcourt</option><option>Lagos</option><option>Abuja</option><option>Warri</option><option>Other</option></select>
+<p id="recStatus" style="font-size:12px;margin:6px 0">Ready to record</p>
+<button class="btn" id="recBtn" style="background:#ff4757;color:#fff" onclick="toggleRec()">🔴 Start Recording</button>
+<button class="btn" style="background:#2ed573;color:#000" onclick="saveVoice()">💾 Save Voice</button>
+<p style="font-size:10px;opacity:.7">Must type transcript + record 3s+ to be GOOD. No transcript = BROKEN 0h</p>
+</div>
+
+<div class="card">
+<h4>🎧 My Voices - Raw → Approved</h4>
+<div id="myVoices">Loading...</div>
+</div>
+
+<div class="card" style="text-align:center">
+<button class="btn" style="background:rgba(255,255,255,.15)" onclick="location.href='ademi.html'">👑 Chairman Panel</button>
+</div>
+
 <script>
-async function loadMyHours(){
-  let myName = localStorage.getItem('pidgin_user_name') || localStorage.getItem('user_name') || ''; 
-  if(!myName) return;
-  let {data} = await sb.from('voices').select('*').eq('name', myName).limit(200);
-  // If your table use user_name instead of name, change above
-  if(!data || !data.length){
-    // try user_name column
-    let r2 = await sb.from('voices').select('*').eq('user_name', myName).limit(200);
-    data = r2.data;
-  }
-  if(!data || !data.length) return;
-  let raw=0, audited=0, approved=0, good=0, broken=0;
-  data.forEach(v=>{
-    let d=parseFloat(v.duration_seconds||v.duration||0)||0; raw+=d;
-    let a=v.approved_duration_seconds!=null?parseFloat(v.approved_duration_seconds):0; audited+=a;
-    if(v.status==='GOOD') good++; if(v.status==='BROKEN') broken++;
-    if(v.status==='GOOD' && v.approved_duration_seconds!=null) approved+=a;
-  });
-  document.getElementById('myHoursCard').style.display='block';
-  document.getElementById('myHoursText').innerHTML=`
-    Raw: <b>${(raw/60).toFixed(1)} mins</b> (${(raw/3600).toFixed(2)}h) <br>
-    Audited (After Auto-Check): <b style="color:#feca57">${(audited/60).toFixed(1)} mins</b> (${(audited/3600).toFixed(2)}h) <br>
-    <span style="background:#2ed573;color:#000;padding:4px 8px;border-radius:6px;font-weight:bold">✅ Approved: ${(audited/60).toFixed(1)} mins = ${(audited/3600).toFixed(2)}h</span><br>
-    <small>Good: ${good} | Broken removed: ${broken} | Loss: ${((raw-audited)/60).toFixed(1)} mins</small>
-  `;
-  document.getElementById('myHoursBreakdown').innerHTML=data.slice(0,5).map(v=>`<div style="background:rgba(0,0,0,.3);padding:6px;border-radius:6px;margin:4px 0;display:flex;justify-content:space-between"><span>${(v.duration_seconds||0)}s → ${v.approved_duration_seconds||0}s</span><span style="background:${v.status==='GOOD'?'#2ed573':'#ff4757'};padding:2px 6px;border-radius:4px;font-size:10px">${v.status||'PENDING'}</span></div>`).join('');
+const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+let mediaRec, chunks=[], audioBlob, startTime;
+
+document.getElementById('userName').value=localStorage.getItem('pidgin_user_name')||'';
+function toggleRec(){
+ if(mediaRec && mediaRec.state==='recording'){mediaRec.stop();document.getElementById('recBtn').innerText='🔴 Start Recording';document.getElementById('recBtn').style.background='#ff4757';return;}
+ navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{
+   mediaRec=new MediaRecorder(s);chunks=[];startTime=Date.now();
+   mediaRec.ondataavailable=e=>chunks.push(e.data);
+   mediaRec.onstop=()=>{audioBlob=new Blob(chunks,{type:'audio/webm'});let dur=(Date.now()-startTime)/1000;document.getElementById('recStatus').innerHTML=`✅ Recorded ${dur.toFixed(1)}s - Ready to save`;}
+   mediaRec.start();document.getElementById('recStatus').innerText='🔴 Recording... speak Pidgin!';document.getElementById('recBtn').innerText='⏹️ Stop';document.getElementById('recBtn').style.background='#ffa502';
+ });
 }
-loadMyHours();
+
+async function saveVoice(){
+ let name=document.getElementById('userName').value.trim()||'Anon';let title=document.getElementById('vName').value.trim()||'Voice';let transcript=document.getElementById('vTranscript').value.trim();let loc=document.getElementById('vLoc').value;
+ if(!audioBlob) return alert('Record first!');
+ if(!transcript) transcript='No transcript';
+ localStorage.setItem('pidgin_user_name',name);
+ let dur=(Date.now()-startTime)/1000;
+ let fileName=`${Date.now()}_${name}.webm`;
+ let {data:up,error:upErr}=await sb.storage.from('voices').upload(fileName,audioBlob);
+ if(upErr){alert('Upload error: '+upErr.message);return;}
+ let {data:urlData}=sb.storage.from('voices').getPublicUrl(fileName);
+ let {error}=await sb.from('voices').insert([{name:name,user_name:name,title:title,transcript:transcript,location:loc,duration_seconds:dur,duration:dur,audio_url:urlData.publicUrl,quality_score:0,status:'UNCHECKED',inspector_note:'Waiting for Chairman auto-check'}]);
+ if(error) alert('Save error: '+error.message); else {alert(`Saved! Raw ${dur.toFixed(1)}s - Waiting for Chairman to approve hours`);audioBlob=null;document.getElementById('vTranscript').value='';document.getElementById('vName').value='';loadMyVoices();loadMyHours();}
+}
+
+async function loadMyVoices(){
+ let myName=localStorage.getItem('pidgin_user_name')||''; if(!myName){document.getElementById('myVoices').innerHTML='Enter name above to see your voices';return;}
+ let {data} = await sb.from('voices').select('*').eq('name',myName).order('created_at',{ascending:false}).limit(50);
+ if(!data || !data.length){
+   let r2=await sb.from('voices').select('*').eq('user_name',myName).order('created_at',{ascending:false}).limit(50);
+   data=r2.data;
+ }
+ if(!data||!data.length){document.getElementById('myVoices').innerHTML='No voices yet. Record!';return;}
+ document.getElementById('myVoices').innerHTML=data.map(v=>{
+   let col=v.status==='GOOD'?'#2ed573':v.status==='BROKEN'?'#ff4757':'#feca57';
+   return `<div style="background:rgba(0,0,0,.35);padding:10px;border-radius:10px;margin:8px 0;border-left:5px solid ${col}">
+   <div style="display:flex;justify-content:space-between"><b>${v.title||v.name}</b><span style="background:${col};color:#000;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:800">${v.status||'PENDING'}</span></div>
+   <small>📍 ${v.location||''} | ${new Date(v.created_at).toLocaleDateString()}</small><br>
+   <b>⏱️ Raw: ${parseFloat(v.duration_seconds||0).toFixed(1)}s → Approved: ${v.approved_duration_seconds!=null?parseFloat(v.approved_duration_seconds).toFixed(1)+'s': 'Pending audit'}</b><br>
+   <small>📝 "${(v.transcript||'No transcript').slice(0,100)}"</small><br>
+   <small style="background:rgba(255,255,0,.15);padding:3px 6px;border-radius:4px;display:inline-block;margin:4px 0">${v.inspector_note||'Waiting for Chairman'}</small><br>
+   <audio controls src="${v.audio_url}" style="width:100%;height:30px;margin-top:4px"></audio></div>`;
+ }).join('');
+}
+
+async function loadMyHours(){
+ let myName=localStorage.getItem('pidgin_user_name')||''; if(!myName) return;
+ let {data} = await sb.from('voices').select('*').eq('name',myName).limit(200);
+ if(!data||!data.length){let r2=await sb.from('voices').select('*').eq('user_name',myName).limit(200); data=r2.data;}
+ if(!data||!data.length) return;
+ let raw=0,audited=0,good=0,broken=0;
+ data.forEach(v=>{
+   let d=parseFloat(v.duration_seconds||0)||0; raw+=d;
+   let a=v.approved_duration_seconds!=null?parseFloat(v.approved_duration_seconds):0; audited+=a;
+   if(v.status==='GOOD') good++; if(v.status==='BROKEN') broken++;
+ });
+ document.getElementById('myHoursCard').style.display='block';
+ document.getElementById('myHoursText').innerHTML=`Raw Claimed: <b>${(raw/60).toFixed(1)} mins (${(raw/3600).toFixed(3)}h)</b><br>Audited After Auto-Check: <b style="color:#feca57">${(audited/60).toFixed(1)} mins (${(audited/3600).toFixed(3)}h)</b><br><span style="background:#2ed573;color:#000;padding:5px 10px;border-radius:8px;font-weight:900;display:inline-block;margin:6px 0">✅ APPROVED: ${(audited/60).toFixed(1)} mins = ${(audited/3600).toFixed(3)}h</span><br><small>Good: ${good} | Broken removed: ${broken} | Loss: ${((raw-audited)/60).toFixed(1)} mins</small>`;
+ document.getElementById('myHoursBreakdown').innerHTML=data.slice(0,5).map(v=>`<div style="background:rgba(0,0,0,.3);padding:6px;border-radius:6px;margin:4px 0;display:flex;justify-content:space-between"><span>${(v.duration_seconds||0).toFixed(1)}s → ${v.approved_duration_seconds!=null?v.approved_duration_seconds:'..'}s</span><span style="background:${v.status==='GOOD'?'#2ed573':'#ff4757'};padding:2px 6px;border-radius:4px;font-size:10px">${v.status||'PENDING'}</span></div>`).join('');
+}
+
+async function loadAnnouncementsUser(){
+ try{
+  let {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(5);
+  if(data&&data.length){
+    document.getElementById('annBoard').style.display='block';
+    document.getElementById('annListUser').innerHTML=data.map(a=>`<div style="background:rgba(0,0,0,.15);padding:8px;border-radius:8px;margin:6px 0"><b>📢 ${a.title}</b><br><span style="font-size:13px">${a.message}</span><br><small>${new Date(a.created_at).toLocaleDateString()}</small></div>`).join('');
+  }
+ }catch(e){}
+}
+
+loadMyVoices();loadMyHours();loadAnnouncementsUser();
 </script>
+</body>
+</html>
