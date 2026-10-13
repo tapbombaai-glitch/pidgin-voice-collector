@@ -32,7 +32,7 @@ input,textarea,select{width:100%;padding:12px;border-radius:10px;background:rgba
 <script>
 const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 let mediaRec,chunks=[],audioBlob,startTime,recognition,finalTranscript='',autoSaveTimer,audioContext,analyser,speakingTime=0,lastCheck=0;
-const MIN_SECONDS = 120; // 2 MINUTES - change to 180 if you want 3 minutes
+const MIN_SECONDS = 120;
 document.getElementById('userName').value=localStorage.getItem('pidgin_user_name')||'';
 
 function setupSpeech(){
@@ -45,21 +45,17 @@ function setupSpeech(){
 function checkScam(transcript, talkingTime, totalTime){
  let t = (transcript||'').toLowerCase().trim();
  let words = t.split(/\s+/).filter(w=>w.length>0);
-
- // RULE 1: Must reach 2 minutes talking time
  if(talkingTime < MIN_SECONDS){
-   return {ok:false, reason:`Too short! You talk only ${Math.round(talkingTime)}s (${(talkingTime/60).toFixed(1)} mins) — Need at least ${MIN_SECONDS/60} mins (2 mins). Talk more!`};
+   return {ok:false, reason:`Too short! You talk only ${Math.round(talkingTime)}s (${(talkingTime/60).toFixed(1)} mins) — Need at least ${MIN_SECONDS/60} mins`};
  }
- // RULE 2: No nonsense repeat
  if(t && /(.)\1{5,}/.test(t)) return {ok:false, reason:`Nonsense "aaaa" detected — talk real Pidgin`};
  if(words.length>=5){
    let counts={}; words.forEach(w=>counts[w]=(counts[w]||0)+1);
    let maxRepeat = Math.max(...Object.values(counts));
-   if(maxRepeat/words.length > 0.6) return {ok:false, reason:`Same word repeated x${maxRepeat} — talk different words`};
+   if(maxRepeat/words.length > 0.6) return {ok:false, reason:`Same word repeated x${maxRepeat} — talk different`};
  }
- // RULE 3: If transcript exists, check small pidgin. If transcript empty but talkingTime is 2 mins, allow it (network issue)
  if(t.length>10){
-   let pidginWords = ['na','dey','abi','oga','abeg','una','wey','sabi','waka','how far','no be','i dey','you dey'];
+   let pidginWords = ['na','dey','abi','oga','abeg','una','wey','sabi','waka','how far','no be','i dey','you dey','e dey','shebi'];
    let hasPidgin = pidginWords.some(p=>t.includes(p));
    if(!hasPidgin && words.length<15) return {ok:false, reason:`No Pidgin word in "${t.slice(0,40)}" — must be Pidgin`};
  }
@@ -71,7 +67,7 @@ async function toggleRec(){
    mediaRec.stop(); if(recognition) try{recognition.stop();}catch(e){} if(audioContext) try{audioContext.close();}catch(e){}
    document.getElementById('recBtn').innerText='⏳ Checking...';
    let total=(Date.now()-startTime)/1000; let silent=total-speakingTime;
-   document.getElementById('recStatus').innerHTML=`Total ${total.toFixed(1)}s - Talk ${speakingTime.toFixed(1)}s - Checking 2 mins rule...`;
+   document.getElementById('recStatus').innerHTML=`Total ${total.toFixed(1)}s - Talk ${speakingTime.toFixed(1)}s - Checking...`;
    clearTimeout(autoSaveTimer); autoSaveTimer=setTimeout(()=>autoSaveVoice(total,speakingTime,silent),1000); return;
  }
  finalTranscript=''; document.getElementById('vTranscript').value=''; audioBlob=null; speakingTime=0;
@@ -83,11 +79,10 @@ async function toggleRec(){
    function checkVoice(){
      if(!mediaRec||mediaRec.state!=='recording') return;
      analyser.getByteFrequencyData(data); let sum=0; for(let i=0;i<data.length;i++) sum+=data[i]; let avg=sum/data.length;
-     let talking=avg>8; // More sensitive - was 15, now 8 so it hears you!
+     let talking=avg>8;
      if(talking){speakingTime+=(Date.now()-lastCheck)/1000;}
      let mins = speakingTime/60;
-     let need = MIN_SECONDS/60;
-     if(talking) document.getElementById('recStatus').innerHTML=`🔴 TALKING ${speakingTime.toFixed(0)}s / ${MIN_SECONDS}s (${mins.toFixed(1)}/${need} mins) Vol ${avg.toFixed(0)} — ${speakingTime>=MIN_SECONDS?'✅ Reach 2 mins! You can STOP':'Keep talking...'}`;
+     if(talking) document.getElementById('recStatus').innerHTML=`🔴 TALKING ${speakingTime.toFixed(0)}s / ${MIN_SECONDS}s (${mins.toFixed(1)} mins) Vol ${avg.toFixed(0)} — ${speakingTime>=MIN_SECONDS?'✅ Reach 2 mins! You can STOP':'Keep talking...'}`;
      else document.getElementById('recStatus').innerHTML=`🤫 Quiet ${speakingTime.toFixed(0)}s / ${MIN_SECONDS}s — Talk loud!`;
      lastCheck=Date.now(); requestAnimationFrame(checkVoice);
    }
@@ -103,30 +98,36 @@ async function autoSaveVoice(total, talking, silent){
  let scamCheck = checkScam(transcript, talking, total);
  let approved, status, note, qual;
  if(!scamCheck.ok){
-   approved=0; status='BROKEN'; qual=0; note=`❌ REJECTED: ${scamCheck.reason} | Total ${total.toFixed(1)}s Talk ${talking.toFixed(1)}s | 0h`;
+   approved=0; status='BROKEN'; qual=0; note=`❌ REJECTED: ${scamCheck.reason} | Total ${total.toFixed(1)}s Talk ${talking.toFixed(1)}s`;
    document.getElementById('recStatus').innerHTML=`❌ REJECTED! ${scamCheck.reason}<br>0 hours`;
  } else {
-   approved=talking; status='GOOD'; qual=90; note=`✅ APPROVED: ${scamCheck.reason} | Total ${total.toFixed(1)}s Talk ${talking.toFixed(1)}s Silent ${silent.toFixed(1)}s removed → Approved ${approved.toFixed(1)}s = ${(approved/3600).toFixed(3)}h`;
+   approved=talking; status='GOOD'; qual=90; note=`✅ APPROVED: Talk ${talking.toFixed(1)}s = ${(talking/3600).toFixed(3)}h`;
    document.getElementById('recStatus').innerHTML=`✅ APPROVED! Talk ${talking.toFixed(0)}s (${(talking/60).toFixed(1)} mins) → Saved!`;
  }
  try{
-   let fileName=`${Date.now()}_${name}.webm`; await sb.storage.from('voices').upload(fileName,audioBlob);
+   let fileName=`${Date.now()}_${name.replace(/\s+/g,'_')}.webm`; await sb.storage.from('voices').upload(fileName,audioBlob);
    let {data:urlData}=sb.storage.from('voices').getPublicUrl(fileName);
-   await sb.from('voices').insert([{name:name,user_name:name,title:`Voice ${new Date().toLocaleTimeString()} - ${talking>=MIN_SECONDS?'GOOD':'SHORT'}`,transcript:transcript||'(No transcript but audio '+talking.toFixed(0)+'s)',location:document.getElementById('vLoc').value,duration_seconds:total,approved_duration_seconds:approved,audio_url:urlData.publicUrl,quality_score:qual,status:status,inspector_note:note}]);
+   await sb.from('voices').insert([{name:name,user_name:name,title:`${name} - ${(talking/60).toFixed(1)} mins - ${status}`,transcript:transcript||'(Audio '+talking.toFixed(0)+'s)',location:document.getElementById('vLoc').value,duration_seconds:total,approved_duration_seconds:approved,audio_url:urlData.publicUrl,quality_score:qual,status:status,inspector_note:note}]);
    resetBtn(); loadMyVoices(); loadMyHours();
  }catch(e){alert('Save failed: '+e.message); resetBtn();}
 }
 function resetBtn(){document.getElementById('recBtn').innerText='🔴 START RECORDING'; document.getElementById('recBtn').style.background='#ff4757';}
+
 async function loadMyVoices(){
- let myName=localStorage.getItem('pidgin_user_name')||''; if(!myName){document.getElementById('myVoices').innerHTML='Enter name';return;}
+ let myName=localStorage.getItem('pidgin_user_name')||'';
+ if(!myName){document.getElementById('myVoices').innerHTML='Enter name for up first';return;}
  let {data}=await sb.from('voices').select('*').eq('name',myName).order('created_at',{ascending:false}).limit(50);
  if(!data||!data.length){let r2=await sb.from('voices').select('*').eq('user_name',myName).order('created_at',{ascending:false}).limit(50); data=r2.data;}
  if(!data||!data.length){document.getElementById('myVoices').innerHTML='No voices yet — talk 2 mins!';return;}
  document.getElementById('myVoices').innerHTML=data.map(v=>{
    let col=v.status==='GOOD'?'#2ed573':'#ff4757';
-   return `<div style="background:rgba(0,0,0,.35);padding:10px;border-radius:10px;margin:8px 0;border-left:5px solid ${col}"><b>${v.title}</b> <span style="background:${col};color:#000;padding:2px 6px;border-radius:5px;font-size:10px">${v.status}</span><br><b>Raw ${parseFloat(v.duration_seconds||0).toFixed(0)}s → Approved ${v.approved_duration_seconds!=null?parseFloat(v.approved_duration_seconds).toFixed(0)+'s':'0s'} = ${(parseFloat(v.approved_duration_seconds||0)/60).toFixed(1)} mins</b><br><small>${v.inspector_note||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:28px;margin-top:4px"></audio></div>`;
+   let rawSec = parseFloat(v.duration_seconds||0);
+   let appSec = parseFloat(v.approved_duration_seconds||0);
+   let title = v.title || `${v.name||'Voice'} - ${(appSec/60).toFixed(1)}m`; // FIX undefined
+   return `<div style="background:rgba(0,0,0,.35);padding:10px;border-radius:10px;margin:8px 0;border-left:5px solid ${col}"><b>${title}</b> <span style="background:${col};color:#000;padding:2px 6px;border-radius:5px;font-size:10px">${v.status}</span><br><b>Raw ${rawSec.toFixed(0)}s → Approved ${appSec.toFixed(0)}s = ${(appSec/60).toFixed(1)} mins</b><br><small>${v.inspector_note||''}</small><br><audio controls src="${v.audio_url}" style="width:100%;height:28px;margin-top:4px"></audio></div>`;
  }).join('');
 }
+
 async function loadMyHours(){
  let myName=localStorage.getItem('pidgin_user_name')||''; if(!myName) return;
  let {data}=await sb.from('voices').select('*').eq('name',myName).limit(200); if(!data||!data.length){let r2=await sb.from('voices').select('*').eq('user_name',myName).limit(200); data=r2.data;} if(!data||!data.length) return;
