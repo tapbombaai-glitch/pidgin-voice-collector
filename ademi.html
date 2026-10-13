@@ -12,11 +12,12 @@ body{font-family:sans-serif;background:#0f0c29;color:#fff;padding:12px}
 .btn{padding:12px;border-radius:10px;border:none;font-weight:800;width:100%;margin:6px 0;font-size:15px}
 input,textarea{width:100%;padding:12px;border-radius:10px;background:rgba(0,0,0,.4);color:#fff;border:1px solid #555;margin:6px 0;font-size:15px}
 .h{display:none!important}
+.badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:bold}
 </style>
 </head>
 <body>
-<h2 style="text-align:center;margin:10px 0">👑 Ademi Panel 🤖</h2>
-<p style="text-align:center;font-size:12px;opacity:.7">Chairman Only - AI Inspector</p>
+<h2 style="text-align:center;margin:10px 0">👑 Ademi Panel 🤖 Auto-Inspector</h2>
+<p style="text-align:center;font-size:12px;opacity:.7">Chairman Only - Automatic Check & Arrange</p>
 
 <div id="login" class="card">
 <h4>🔐 Chairman Login</h4>
@@ -27,11 +28,18 @@ input,textarea{width:100%;padding:12px;border-radius:10px;background:rgba(0,0,0,
 
 <div id="main" class="h">
 <div class="card" style="background:linear-gradient(135deg,#2ed573,#1e90ff)">
-<h4>📢 Post Announcement (E go show for user homepage)</h4>
+<h4>📢 Post Announcement</h4>
 <input id="aT" placeholder="Title: e.g Welcome to Pidgin Voice">
 <textarea id="aM" rows="3" placeholder="Message: e.g Drop your best Pidgin today!"></textarea>
 <button class="btn" style="background:#fff;color:#000" onclick="window.postA()">📢 Post Now</button>
 <div id="aList" style="font-size:12px;margin-top:10px"></div>
+</div>
+
+<div class="card" style="background:linear-gradient(135deg,#ff7f50,#ff4757)">
+<h4>🤖 AUTOMATIC CHECK & ADJUST PANEL (Chairman Only)</h4>
+<p id="stats" style="font-size:13px;margin:8px 0">Loading stats...</p>
+<button class="btn" style="background:#fff;color:#000" onclick="window.autoInspectAll()">🤖 RUN AUTOMATIC CHECK - Mark BROKEN & Arrange Best on Top</button>
+<p style="font-size:11px;opacity:.8;margin-top:6px">This go check all voices, mark broken (too short/silent), give real score, and arrange 90% for top!</p>
 </div>
 
 <div class="card">
@@ -39,7 +47,7 @@ input,textarea{width:100%;padding:12px;border-radius:10px;background:rgba(0,0,0,
 <div style="display:flex;gap:6px;margin:8px 0">
 <button class="btn" style="background:#fff;color:#000;flex:1" onclick="window.filterA('all')">All</button>
 <button class="btn" style="background:#2ed573;color:#000;flex:1" onclick="window.filterA('good')">🟢 Good (60%+)</button>
-<button class="btn" style="background:#ff4757;color:#fff;flex:1" onclick="window.filterA('bad')">🔴 Bad</button>
+<button class="btn" style="background:#ff4757;color:#fff;flex:1" onclick="window.filterA('bad')">🔴 Bad/Broken</button>
 </div>
 <div id="listA" style="margin-top:10px">Loading voices... If e still dey here after 5 sec, reload page.</div>
 </div>
@@ -65,42 +73,67 @@ load();loadAnn();
 }
 window.logout=function(){location.reload()}
 
+// NEW AUTOMATIC INSPECTOR - MARKS BROKEN & ADJUSTS
+function inspectVoice(v){
+  let d=v.duration_seconds||v.duration||0; if(typeof d==='string') d=parseFloat(d)||0;
+  let txt=(v.transcript||'').trim();
+  if(!v.audio_url || d<1) return {sc:0,st:'BROKEN',note:'🔴 BROKEN: No audio / 0s / Corrupted'};
+  if(d<2) return {sc:5,st:'BROKEN',note:'🔴 BROKEN: Too short <2s - incomplete'};
+  if(d<3) return {sc:15,st:'BROKEN',note:'🔴 BROKEN: Too short <3s'};
+  if(!txt || txt.length<3) return {sc:20,st:'BROKEN',note:'🔴 BROKEN: No transcript / silent'};
+  let pidgin=['how far','shey','abeg','na','dey','omo','wey','wetin','una','chop','waka']; let l=txt.toLowerCase(); let c=0; pidgin.forEach(w=>{if(l.includes(w))c++});
+  let sc=50+c*8; if(d>=5) sc+=10; if(d>=8) sc+=15; if(d>=12) sc+=10; if(txt.length>30) sc+=5;
+  if(sc>98) sc=98;
+  if(sc>=75) return {sc,st:'GOOD',note:'✅ GOOD: Clear, Pidgin rich, complete'};
+  if(sc>=45) return {sc,st:'WARNING',note:'🟡 FAIR: Manageable but short'};
+  return {sc,st:'BROKEN',note:'🔴 POOR: Needs re-record'};
+}
+
 async function load(){
 try{
 let {data,error}=await sb.from('voices').select('*').order('quality_score',{ascending:false}).limit(200);
 if(error) throw error;
-if(!data||!data.length){document.getElementById('listA').innerHTML='No voices yet - Tell users to record for index.html';return}
+if(!data||!data.length){document.getElementById('listA').innerHTML='No voices yet'; document.getElementById('stats').innerHTML='Total: 0'; return}
+let good=data.filter(v=> (v.quality_score||0)>=60).length; let bad=data.filter(v=> (v.quality_score||0)<60).length; let broken=data.filter(v=> v.status==='BROKEN' || (v.quality_score||0)<20).length;
+document.getElementById('stats').innerHTML=`Total: ${data.length} | ✅ Good: ${good} | 🔴 Bad: ${bad} | 💀 Broken: ${broken}<br><small>Sorted: Best on Top (90% → 0%) - Auto-Arranged</small>`;
 document.getElementById('listA').innerHTML=data.map(v=>{
 let c=v.quality_score>=75?'#2ed573':v.quality_score>=45?'#ffa502':'#ff4757';
-return `<div class="vItem" data-sc="${v.quality_score||0}" style="border-left:6px solid ${c};background:rgba(0,0,0,.35);padding:12px;margin:10px 0;border-radius:12px;font-size:13px">
-<b style="font-size:14px">${v.name}</b> - <b style="color:${c}">${v.quality_score||0}%</b> <small>${v.ai_verdict||''}</small> <small style="float:right">⏱️ ${v.duration_seconds||0}s</small><br>
+let statusColor=v.status==='BROKEN'?'#ff4757':v.status==='GOOD'?'#2ed573':'#ffa502';
+return `<div class="vItem" data-sc="${v.quality_score||0}" style="border-left:6px solid ${c};background:${v.status==='BROKEN'?'#2a0a0a':'rgba(0,0,0,.35)'};padding:12px;margin:10px 0;border-radius:12px;font-size:13px">
+<div style="display:flex;justify-content:space-between"><b style="font-size:14px">${v.name||v.user_name||'Anon'}</b><span class="badge" style="background:${statusColor}">${v.status||'UNCHECKED'}</span></div>
+<b style="color:${c}">${v.quality_score||0}%</b> <small>${v.ai_verdict||''}</small> <small style="float:right">⏱️ ${v.duration_seconds||v.duration||0}s</small><br>
 <small style="opacity:.8">📍 ${v.location||'No location'} | ${new Date(v.created_at).toLocaleDateString()}</small><br>
 <div style="background:rgba(255,255,255,.07);padding:8px;border-radius:8px;margin:6px 0;font-size:12px">"${(v.transcript||'No transcript').slice(0,150)}"</div>
+<div style="background:rgba(255,255,0,.15);padding:6px;border-radius:6px;margin:4px 0;font-size:11px">🤖 Inspector: ${v.inspector_note||v.ai_verdict||'Not inspected yet - Click RUN AUTOMATIC CHECK'}</div>
 <audio controls src="${v.audio_url}" style="width:100%;height:32px;margin:6px 0"></audio>
-<button onclick="window.delV('${v.id}')" style="background:#ff4757;color:#fff;border:none;padding:8px;border-radius:8px;width:100%;font-weight:700;margin-top:6px">🗑️ Delete This Voice</button>
+<div style="display:flex;gap:5px"><button onclick="window.markGood('${v.id}')" style="background:#2ed573;color:#000;border:none;padding:8px;border-radius:8px;flex:1;font-weight:700">✅ Mark GOOD 90%</button><button onclick="window.markBroken('${v.id}')" style="background:#ff4757;color:#fff;border:none;padding:8px;border-radius:8px;flex:1;font-weight:700">🔴 BROKEN</button><button onclick="window.delV('${v.id}')" style="background:#555;color:#fff;border:none;padding:8px;border-radius:8px;flex:1">🗑️</button></div>
 </div>`}).join('');
-}catch(e){document.getElementById('listA').innerHTML='Error: '+e.message+'<br>Check Supabase table voices';}
+}catch(e){document.getElementById('listA').innerHTML='Error: '+e.message;}
 }
-async function loadAnn(){
-let {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false});
-document.getElementById('aList').innerHTML=(data||[]).map(a=>`<div style="background:rgba(0,0,0,.25);padding:8px;border-radius:8px;margin:5px 0;display:flex;justify-content:space-between;align-items:center"><span><b>${a.title}</b><br><small>${a.message}</small></span><button onclick="window.delA('${a.id}')" style="background:#ff4757;color:#fff;border:none;padding:4px 8px;border-radius:6px">X</button></div>`).join('')||'No announcements yet';
+
+window.autoInspectAll=async function(){
+ if(!confirm('🤖 Run AUTOMATIC CHECK for all voices?\n\nE go:\n- Mark too short/silent as BROKEN\n- Give real score (90%, 75% etc)\n- Arrange best on top\n\nContinue?')) return;
+ document.getElementById('stats').innerHTML='🤖 Inspecting & Adjusting all voices... please wait...';
+ let {data,error}=await sb.from('voices').select('*').limit(200);
+ if(error){alert(error.message); return;}
+ let fixed=0;
+ for(let v of data){
+   let res=inspectVoice(v);
+   // update DB with new score and status
+   let {error:upErr}=await sb.from('voices').update({quality_score:res.sc, status:res.st, inspector_note:res.note, ai_verdict: res.st+' - '+res.note}).eq('id',v.id);
+   if(!upErr) fixed++;
+ }
+ alert(`✅ DONE! ${fixed} voices auto-checked & adjusted!\n\nBest voices now on TOP!\nBroken voices now at BOTTOM with 🔴 mark!`);
+ load();
 }
-window.postA=async function(){
-let t=document.getElementById('aT').value.trim();
-let m=document.getElementById('aM').value.trim();
-if(!t||!m) return alert('Fill title and message');
-try{await sb.from('announcements').insert([{title:t,message:m}]);alert('✅ Posted! Users go see am for homepage');document.getElementById('aT').value='';document.getElementById('aM').value='';loadAnn();}catch(e){alert('Error: '+e.message)}
-}
+
+window.markBroken=async function(id){await sb.from('voices').update({status:'BROKEN',quality_score:0,inspector_note:'🔴 BROKEN: Marked by Chairman',ai_verdict:'BROKEN'}).eq('id',id); load();}
+window.markGood=async function(id){await sb.from('voices').update({status:'GOOD',quality_score:90,inspector_note:'✅ GOOD: Approved by Chairman',ai_verdict:'GOOD 🟢 Approved'}).eq('id',id); load();}
+async function loadAnn(){let {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false});document.getElementById('aList').innerHTML=(data||[]).map(a=>`<div style="background:rgba(0,0,0,.25);padding:8px;border-radius:8px;margin:5px 0;display:flex;justify-content:space-between"><span><b>${a.title}</b><br><small>${a.message}</small></span><button onclick="window.delA('${a.id}')" style="background:#ff4757;color:#fff;border:none;padding:4px 8px;border-radius:6px">X</button></div>`).join('')||'No announcements yet';}
+window.postA=async function(){let t=document.getElementById('aT').value.trim();let m=document.getElementById('aM').value.trim();if(!t||!m)return alert('Fill title and message');await sb.from('announcements').insert([{title:t,message:m}]);alert('✅ Posted!');document.getElementById('aT').value='';document.getElementById('aM').value='';loadAnn();}
 window.delA=async function(id){if(!confirm('Delete announcement?'))return;await sb.from('announcements').delete().eq('id',id);loadAnn()}
-window.delV=async function(id){if(!confirm('Delete this voice permanently?'))return;let {error}=await sb.from('voices').delete().eq('id',id);if(error) alert(error.message);else load()}
-window.filterA=function(t){
-document.querySelectorAll('.vItem').forEach(e=>{
-let s=parseInt(e.dataset.sc)||0;
-if(t==='all') e.style.display='block';
-else if(t==='good') e.style.display=s>=60?'block':'none';
-else e.style.display=s<60?'block':'none';
-})
-}
+window.delV=async function(id){if(!confirm('Delete this voice permanently?'))return;await sb.from('voices').delete().eq('id',id);load()}
+window.filterA=function(t){document.querySelectorAll('.vItem').forEach(e=>{let s=parseInt(e.dataset.sc)||0;if(t==='all')e.style.display='block';else if(t==='good')e.style.display=s>=60?'block':'none';else e.style.display=s<60?'block':'none';})}
 </script>
 </body>
 </html>
