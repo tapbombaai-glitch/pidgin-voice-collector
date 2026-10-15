@@ -16,17 +16,8 @@
     margin: 0 auto;
     min-height: 100vh;
   }
-  h1 {
-    text-align: center;
-    font-size: 22px;
-    margin: 10px 0 4px;
-  }
-  .subtitle {
-    text-align: center;
-    font-size: 13px;
-    opacity: 0.7;
-    margin-bottom: 18px;
-  }
+  h1 { text-align: center; font-size: 22px; margin: 10px 0 4px; }
+  .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
   .card {
     background: rgba(255,255,255,0.08);
     border-radius: 16px;
@@ -44,10 +35,7 @@
     font-size: 16px;
     margin-bottom: 12px;
   }
-  textarea {
-    min-height: 90px;
-    resize: none;
-  }
+  textarea { min-height: 90px; resize: none; }
   .btn {
     width: 100%;
     padding: 16px;
@@ -60,7 +48,6 @@
   }
   .btn-red { background: #ff4757; color: white; }
   .btn-orange { background: #ffa502; color: #000; }
-  .btn-green { background: #2ed573; color: #000; }
   .status-box {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
@@ -120,13 +107,11 @@
 <h1>🎙️ Ademi Pidgin Voice</h1>
 <p class="subtitle">Talk minimum 2 minutes • Real Pidgin only</p>
 
-<!-- My Hours -->
 <div class="hours-card" id="myHoursCard">
   <h3 style="margin-bottom: 8px;">⏱️ My Hours</h3>
   <div id="myHoursText" style="font-size: 15px;"></div>
 </div>
 
-<!-- Recording Card -->
 <div class="card">
   <input id="userName" placeholder="Your name (e.g. Adiam)" maxlength="40">
   
@@ -140,7 +125,6 @@
 
   <textarea id="vTranscript" placeholder="Your Pidgin will appear here while you talk..." readonly></textarea>
 
-  <!-- Progress -->
   <div class="progress-container">
     <div class="progress-bar" id="progressBar"></div>
   </div>
@@ -162,7 +146,6 @@
   </p>
 </div>
 
-<!-- My Voices -->
 <div class="card">
   <h3 style="margin-bottom: 12px;">🎧 My Voices</h3>
   <div id="myVoices">Loading your voices...</div>
@@ -179,7 +162,7 @@ const SUPA_URL = "https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY = "sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-const MIN_SECONDS = 120; // 2 minutes
+const MIN_SECONDS = 120;
 
 let mediaRec = null;
 let chunks = [];
@@ -193,10 +176,8 @@ let audioContext = null;
 let analyser = null;
 let isRecording = false;
 
-// Load saved name
 document.getElementById('userName').value = localStorage.getItem('pidgin_user_name') || '';
 
-// Speech recognition
 function setupSpeech() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
@@ -218,7 +199,6 @@ function setupSpeech() {
   return rec;
 }
 
-// Simple quality check
 function checkQuality(transcript, talkingTime) {
   const t = (transcript || '').toLowerCase().trim();
   const words = t.split(/\s+/).filter(w => w.length > 1);
@@ -230,12 +210,10 @@ function checkQuality(transcript, talkingTime) {
     };
   }
 
-  // Detect nonsense
   if (/(.)\1{6,}/.test(t)) {
     return { ok: false, reason: "Too many repeated letters detected. Please talk normally." };
   }
 
-  // Too much repetition of same word
   if (words.length >= 8) {
     const counts = {};
     words.forEach(w => counts[w] = (counts[w] || 0) + 1);
@@ -245,7 +223,6 @@ function checkQuality(transcript, talkingTime) {
     }
   }
 
-  // Basic Pidgin check
   const pidginWords = ['na', 'dey', 'abi', 'abeg', 'una', 'wey', 'sabi', 'waka', 'how far', 'oga', 'no be', 'i dey', 'you dey', 'e dey', 'shebi', 'wetin'];
   const hasPidgin = pidginWords.some(p => t.includes(p));
 
@@ -256,18 +233,14 @@ function checkQuality(transcript, talkingTime) {
   return { ok: true, reason: "Good recording!" };
 }
 
-// Update progress UI
 function updateProgress() {
   const percent = Math.min((speakingTime / MIN_SECONDS) * 100, 100);
   document.getElementById('progressBar').style.width = percent + '%';
-  document.getElementById('progressText').innerText = 
-    `${Math.floor(speakingTime)} / ${MIN_SECONDS} seconds`;
+  document.getElementById('progressText').innerText = `${Math.floor(speakingTime)} / ${MIN_SECONDS} seconds`;
 }
 
-// Main record toggle
 async function toggleRec() {
   if (isRecording) {
-    // STOP
     isRecording = false;
     if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
     if (recognition) try { recognition.stop(); } catch(e) {}
@@ -282,7 +255,6 @@ async function toggleRec() {
     return;
   }
 
-  // START
   const name = document.getElementById('userName').value.trim();
   if (!name) {
     alert('Please enter your name first');
@@ -301,7 +273,6 @@ async function toggleRec() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     
-    // Audio analysis for real speaking time
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
@@ -365,7 +336,6 @@ async function toggleRec() {
   }
 }
 
-// Process after stop
 async function processRecording() {
   const name = document.getElementById('userName').value.trim() || 'Anon';
   const transcript = document.getElementById('vTranscript').value.trim();
@@ -432,7 +402,6 @@ function resetUI() {
   updateProgress();
 }
 
-// Load user voices
 async function loadMyVoices() {
   const myName = localStorage.getItem('pidgin_user_name') || '';
   if (!myName) {
@@ -479,7 +448,6 @@ async function loadMyVoices() {
   }).join('');
 }
 
-// Load hours summary
 async function loadMyHours() {
   const myName = localStorage.getItem('pidgin_user_name') || '';
   if (!myName) return;
@@ -511,7 +479,6 @@ async function loadMyHours() {
   `;
 }
 
-// Init
 loadMyVoices();
 loadMyHours();
 </script>
