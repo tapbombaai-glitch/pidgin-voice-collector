@@ -17,8 +17,8 @@
     min-height: 100vh;
   }
   h1 { text-align: center; font-size: 22px; margin: 10px 0 4px; }
- .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
- .card {
+.subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
+.card {
     background: rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 16px;
@@ -36,7 +36,7 @@
     margin-bottom: 12px;
   }
   textarea { min-height: 80px; resize: none; }
- .btn {
+.btn {
     width: 100%;
     padding: 16px;
     border-radius: 14px;
@@ -46,10 +46,10 @@
     cursor: pointer;
     margin-top: 8px;
   }
- .btn-red { background: #ff4757; color: white; }
- .btn-orange { background: #ffa502; color: #000; }
- .btn-green { background: #2ed573; color: #000; }
- .status-box {
+.btn-red { background: #ff4757; color: white; }
+.btn-orange { background: #ffa502; color: #000; }
+.btn-green { background: #2ed573; color: #000; }
+.status-box {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
     padding: 14px;
@@ -59,21 +59,21 @@
     margin: 12px 0;
     line-height: 1.4;
   }
- .progress-container {
+.progress-container {
     background: rgba(0,0,0,0.4);
     border-radius: 20px;
     height: 18px;
     margin: 12px 0;
     overflow: hidden;
   }
- .progress-bar {
+.progress-bar {
     height: 100%;
     background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573);
     width: 0%;
     transition: width 0.3s ease;
     border-radius: 20px;
   }
- .hours-card {
+.hours-card {
     background: linear-gradient(135deg, #667eea, #764ba2);
     border-radius: 16px;
     padding: 16px;
@@ -81,14 +81,14 @@
     border: 2px solid #f1c40f;
     margin-bottom: 16px;
   }
- .voice-item {
+.voice-item {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
     padding: 12px;
     margin-bottom: 10px;
     border-left: 5px solid #555;
   }
- .badge {
+.badge {
     display: inline-block;
     padding: 3px 8px;
     border-radius: 6px;
@@ -96,11 +96,12 @@
     font-weight: bold;
     margin-left: 6px;
   }
- .good { background: #2ed573; color: #000; }
- .bad { background: #ff4757; color: #fff; }
+.good { background: #2ed573; color: #000; }
+.bad { background: #ff4757; color: #fff; }
+.unchecked { background: #ff6b81; color: #fff; }
   audio { width: 100%; margin-top: 8px; height: 36px; }
- .small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
- .section-title {
+.small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
+.section-title {
     font-size: 15px;
     font-weight: 700;
     margin-bottom: 10px;
@@ -159,10 +160,9 @@
   <div id="myVoices">Loading your voices...</div>
 </div>
 
-<div style="text-align: center; margin: 20px 0;">
-  <button class="btn" style="background: rgba(255,255,255,0.12); color: #fff;" onclick="location.href='ademi.html'">
-    👑 Chairman Panel
-  </button>
+<!-- HIDDEN CHAIRMAN PANEL - USER WILL NOT SEE IT -->
+<div style="display:none;">
+  <button onclick="location.href='ademi.html'">Chairman Panel</button>
 </div>
 
 <script>
@@ -335,10 +335,10 @@ async function processRecording() {
     note = `❌ REJECTED: ${quality.reason}`;
     document.getElementById('recStatus').innerHTML = `❌ Not accepted<br><span class="small">${quality.reason}</span>`;
   } else {
-    status = 'GOOD';
-    approved = speakingTime;
-    qual = 90;
-    note = `✅ SAVED: ${Math.round(speakingTime)} seconds - Wait for admin to check your Pidgin voice`;
+    status = 'UNCHECKED';
+    approved = 0;
+    qual = 0;
+    note = `⏳ Wait for admin to check your Pidgin voice - ${Math.round(speakingTime)} secs recorded`;
     document.getElementById('recStatus').innerHTML = `✅ Your ${Math.round(speakingTime)} secs don save!<br><div style="background: rgba(241,196,15,0.25); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>`;
   }
   try {
@@ -393,14 +393,17 @@ async function loadMyVoices() {
   }
   document.getElementById('myVoices').innerHTML = data.map(v => {
     const isGood = v.status === 'GOOD';
+    const isUnchecked = v.status === 'UNCHECKED';
+    const badgeClass = isGood? 'good' : isUnchecked? 'unchecked' : 'bad';
     const appMin = (parseFloat(v.approved_duration_seconds || 0) / 60).toFixed(1);
+    const totalSecs = Math.round(parseFloat(v.duration_seconds || 0));
     return `
-      <div class="voice-item" style="border-left-color: ${isGood? '#2ed573' : '#ff4757'}">
+      <div class="voice-item" style="border-left-color: ${isGood? '#2ed573' : isUnchecked? '#ff6b81' : '#ff4757'}">
         <div>
           <strong>${v.name || 'Voice'}</strong>
-          <span class="badge ${isGood? 'good' : 'bad'}">${v.status}</span>
+          <span class="badge ${badgeClass}">${v.status}</span>
         </div>
-        <div style="margin: 6px 0; font-size: 14px;">Approved: <b>${appMin} mins</b></div>
+        <div style="margin: 6px 0; font-size: 14px;">Recorded: <b>${totalSecs} secs</b> | Approved: <b>${appMin} mins</b></div>
         <div style="background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin: 8px 0; font-size: 13px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>
         <div class="small">${v.inspector_note || ''}</div>
         <audio controls src="${v.audio_url}"></audio>
@@ -420,11 +423,12 @@ async function loadMyHours() {
     data = r2.data;
   }
   let approvedSeconds = 0;
-  let good = 0, bad = 0;
+  let good = 0, bad = 0, unchecked = 0;
   if (data && data.length) {
     data.forEach(v => {
       approvedSeconds += parseFloat(v.approved_duration_seconds || 0);
       if (v.status === 'GOOD') good++;
+      else if (v.status === 'UNCHECKED') unchecked++;
       else bad++;
     });
   }
@@ -433,17 +437,13 @@ async function loadMyHours() {
   const progressPercent = Math.min((approvedMinutes / TARGET_MINUTES) * 100, 100);
   let message = '';
   if (approvedMinutes >= TARGET_MINUTES) {
-    message = `<div style="background:#2ed573; color:#000; padding:10px; border-radius:10px; font-weight:800; margin-top:8px;">
-      🎉 You have reached 1 hour 30 minutes!<br>You are ready for ₦500
-    </div>`;
+    message = `<div style="background:#2ed573; color:#000; padding:10px; border-radius:10px; font-weight:800; margin-top:8px;">🎉 You have reached 1 hour 30 minutes!<br>You are ready for ₦500</div>`;
   } else {
-    message = `<div style="margin-top:8px;">
-      You still need <b>${remaining.toFixed(1)} more minutes</b> to earn ₦500
-    </div>`;
+    message = `<div style="margin-top:8px;">You still need <b>${remaining.toFixed(1)} more minutes</b> to earn ₦500<br><span class="small">${unchecked>0? `You have ${unchecked} voice(s) waiting for admin check` : ''}</span></div>`;
   }
   document.getElementById('myHoursText').innerHTML = `
     <div>Approved Time: <b>${approvedMinutes.toFixed(1)} minutes</b></div>
-    <div style="margin: 6px 0;">Good recordings: ${good} | Rejected: ${bad}</div>
+    <div style="margin: 6px 0;">Approved: ${good} | Waiting: ${unchecked} | Rejected: ${bad}</div>
     <div style="background:rgba(0,0,0,0.3); border-radius:10px; height:12px; margin:10px 0;">
       <div style="background:#2ed573; height:100%; width:${progressPercent}%; border-radius:10px;"></div>
     </div>
