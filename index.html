@@ -6,7 +6,7 @@
 <title>Ademi Pidgin Voice</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0f0c29;
@@ -17,8 +17,8 @@
     min-height: 100vh;
   }
   h1 { text-align: center; font-size: 22px; margin: 10px 0 4px; }
-  .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
-  .card {
+ .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
+ .card {
     background: rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 16px;
@@ -36,7 +36,7 @@
     margin-bottom: 12px;
   }
   textarea { min-height: 80px; resize: none; }
-  .btn {
+ .btn {
     width: 100%;
     padding: 16px;
     border-radius: 14px;
@@ -46,10 +46,10 @@
     cursor: pointer;
     margin-top: 8px;
   }
-  .btn-red { background: #ff4757; color: white; }
-  .btn-orange { background: #ffa502; color: #000; }
-  .btn-green { background: #2ed573; color: #000; }
-  .status-box {
+ .btn-red { background: #ff4757; color: white; }
+ .btn-orange { background: #ffa502; color: #000; }
+ .btn-green { background: #2ed573; color: #000; }
+ .status-box {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
     padding: 14px;
@@ -59,21 +59,21 @@
     margin: 12px 0;
     line-height: 1.4;
   }
-  .progress-container {
+ .progress-container {
     background: rgba(0,0,0,0.4);
     border-radius: 20px;
     height: 18px;
     margin: 12px 0;
     overflow: hidden;
   }
-  .progress-bar {
+ .progress-bar {
     height: 100%;
     background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573);
     width: 0%;
     transition: width 0.3s ease;
     border-radius: 20px;
   }
-  .hours-card {
+ .hours-card {
     background: linear-gradient(135deg, #667eea, #764ba2);
     border-radius: 16px;
     padding: 16px;
@@ -81,14 +81,14 @@
     border: 2px solid #f1c40f;
     margin-bottom: 16px;
   }
-  .voice-item {
+ .voice-item {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
     padding: 12px;
     margin-bottom: 10px;
     border-left: 5px solid #555;
   }
-  .badge {
+ .badge {
     display: inline-block;
     padding: 3px 8px;
     border-radius: 6px;
@@ -96,11 +96,11 @@
     font-weight: bold;
     margin-left: 6px;
   }
-  .good { background: #2ed573; color: #000; }
-  .bad { background: #ff4757; color: #fff; }
+ .good { background: #2ed573; color: #000; }
+ .bad { background: #ff4757; color: #fff; }
   audio { width: 100%; margin-top: 8px; height: 36px; }
-  .small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
-  .section-title {
+ .small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
+ .section-title {
     font-size: 15px;
     font-weight: 700;
     margin-bottom: 10px;
@@ -113,13 +113,11 @@
 <h1>🎙️ Ademi Pidgin Voice</h1>
 <p class="subtitle">Talk minimum 2 minutes • Real Pidgin only</p>
 
-<!-- Balance Card -->
 <div class="hours-card" id="myHoursCard">
   <h3 style="margin-bottom: 8px;">💰 My Balance</h3>
   <div id="myHoursText" style="font-size: 15px;">Loading...</div>
 </div>
 
-<!-- Bank Details Card -->
 <div class="card">
   <div class="section-title">🏦 Your Bank Details (Compulsory)</div>
   <input id="accountName" placeholder="Account Name" maxlength="60">
@@ -128,10 +126,8 @@
   <p class="small">You must fill your bank details before you can record.</p>
 </div>
 
-<!-- Recording Card -->
 <div class="card">
   <input id="userName" placeholder="Your name (e.g. Adiam)" maxlength="40">
-  
   <select id="vLoc">
     <option value="Port Harcourt">Port Harcourt</option>
     <option value="Lagos">Lagos</option>
@@ -139,31 +135,25 @@
     <option value="Warri">Warri</option>
     <option value="Other">Other</option>
   </select>
-
   <textarea id="vTranscript" placeholder="Your Pidgin will appear here while you talk..." readonly></textarea>
-
   <div class="progress-container">
     <div class="progress-bar" id="progressBar"></div>
   </div>
   <div style="text-align: center; font-size: 14px; margin-bottom: 8px;" id="progressText">
     0 / 120 seconds
   </div>
-
   <div class="status-box" id="recStatus">
     ✅ Ready<br>
     <span class="small">Fill bank details and talk continuously for at least 2 minutes</span>
   </div>
-
   <button class="btn btn-red" id="recBtn" onclick="toggleRec()">
     🔴 START RECORDING
   </button>
-
   <p class="small" style="text-align: center; margin-top: 10px;">
     Speak clear Pidgin. Long silence will not count.
   </p>
 </div>
 
-<!-- My Voices -->
 <div class="card">
   <h3 style="margin-bottom: 12px;">🎧 My Voices</h3>
   <div id="myVoices">Loading your voices...</div>
@@ -179,10 +169,8 @@
 const SUPA_URL = "https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY = "sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-
-const MIN_SECONDS = 120;          // 2 minutes per recording
-const TARGET_MINUTES = 90;        // 1 hour 30 minutes for ₦500
-
+const MIN_SECONDS = 120;
+const TARGET_MINUTES = 90;
 let mediaRec = null;
 let chunks = [];
 let audioBlob = null;
@@ -194,13 +182,10 @@ let lastCheck = 0;
 let audioContext = null;
 let analyser = null;
 let isRecording = false;
-
-// Load saved data
 document.getElementById('userName').value = localStorage.getItem('pidgin_user_name') || '';
 document.getElementById('accountName').value = localStorage.getItem('pidgin_account_name') || '';
 document.getElementById('accountNumber').value = localStorage.getItem('pidgin_account_number') || '';
 document.getElementById('bankName').value = localStorage.getItem('pidgin_bank_name') || '';
-
 function setupSpeech() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
@@ -221,11 +206,9 @@ function setupSpeech() {
   };
   return rec;
 }
-
 function checkQuality(transcript, talkingTime) {
   const t = (transcript || '').toLowerCase().trim();
   const words = t.split(/\s+/).filter(w => w.length > 1);
-
   if (talkingTime < MIN_SECONDS) {
     return { ok: false, reason: `You talked only ${Math.round(talkingTime)} seconds. You need at least 2 full minutes.` };
   }
@@ -242,72 +225,58 @@ function checkQuality(transcript, talkingTime) {
   }
   const pidginWords = ['na','dey','abi','abeg','una','wey','sabi','waka','how far','oga','no be','i dey','you dey','e dey','shebi','wetin'];
   const hasPidgin = pidginWords.some(p => t.includes(p));
-  if (words.length > 12 && !hasPidgin) {
+  if (words.length > 12 &&!hasPidgin) {
     return { ok: false, reason: "Please speak in Pidgin English." };
   }
   return { ok: true, reason: "Good recording!" };
 }
-
 function updateProgress() {
   const percent = Math.min((speakingTime / MIN_SECONDS) * 100, 100);
   document.getElementById('progressBar').style.width = percent + '%';
   document.getElementById('progressText').innerText = `${Math.floor(speakingTime)} / ${MIN_SECONDS} seconds`;
 }
-
 async function toggleRec() {
   if (isRecording) {
     isRecording = false;
     if (mediaRec && mediaRec.state === 'recording') mediaRec.stop();
     if (recognition) try { recognition.stop(); } catch(e) {}
     if (audioContext) try { audioContext.close(); } catch(e) {}
-
     document.getElementById('recBtn').innerText = '⏳ Checking...';
     document.getElementById('recBtn').disabled = true;
-
     setTimeout(() => processRecording(), 800);
     return;
   }
-
-  // Validate required fields
   const name = document.getElementById('userName').value.trim();
   const accName = document.getElementById('accountName').value.trim();
   const accNumber = document.getElementById('accountNumber').value.trim();
   const bank = document.getElementById('bankName').value.trim();
-
   if (!name) {
     alert('Please enter your name');
     return;
   }
-  if (!accName || !accNumber || !bank) {
+  if (!accName ||!accNumber ||!bank) {
     alert('Please fill all your bank details before recording');
     return;
   }
-
-  // Save to localStorage
   localStorage.setItem('pidgin_user_name', name);
   localStorage.setItem('pidgin_account_name', accName);
   localStorage.setItem('pidgin_account_number', accNumber);
   localStorage.setItem('pidgin_bank_name', bank);
-
   finalTranscript = '';
   document.getElementById('vTranscript').value = '';
   speakingTime = 0;
   chunks = [];
   audioBlob = null;
   updateProgress();
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioContext.createMediaStreamSource(stream);
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
     source.connect(analyser);
-
     const data = new Uint8Array(analyser.frequencyBinCount);
     lastCheck = Date.now();
-
     function checkVoice() {
       if (!isRecording) return;
       analyser.getByteFrequencyData(data);
@@ -315,45 +284,37 @@ async function toggleRec() {
       for (let i = 0; i < data.length; i++) sum += data[i];
       const avg = sum / data.length;
       const talking = avg > 10;
-
       if (talking) speakingTime += (Date.now() - lastCheck) / 1000;
       lastCheck = Date.now();
       updateProgress();
-
       const remaining = Math.max(0, MIN_SECONDS - speakingTime);
       if (talking) {
         if (speakingTime >= MIN_SECONDS) {
           document.getElementById('recStatus').innerHTML = `✅ You have reached 2 minutes!<br><span class="small">You can stop now</span>`;
         } else {
-          document.getElementById('recStatus').innerHTML = `🔴 Talking... \( {Math.floor(speakingTime)}s<br><span class="small"> \){Math.ceil(remaining)} seconds left</span>`;
+          document.getElementById('recStatus').innerHTML = `🔴 Talking... ${Math.floor(speakingTime)}s<br><span class="small">${Math.ceil(remaining)} seconds left</span>`;
         }
       } else {
         document.getElementById('recStatus').innerHTML = `🤫 Quiet detected<br><span class="small">Please keep talking</span>`;
       }
       requestAnimationFrame(checkVoice);
     }
-
     mediaRec = new MediaRecorder(stream);
     mediaRec.ondataavailable = e => chunks.push(e.data);
     mediaRec.onstop = () => { audioBlob = new Blob(chunks, { type: 'audio/webm' }); };
-
     mediaRec.start();
     recognition = setupSpeech();
     if (recognition) try { recognition.start(); } catch(e) {}
-
     isRecording = true;
     startTime = Date.now();
     checkVoice();
-
     document.getElementById('recBtn').innerText = '⏹️ STOP RECORDING';
     document.getElementById('recBtn').className = 'btn btn-orange';
     document.getElementById('recStatus').innerHTML = '🔴 Recording started...<br><span class="small">Talk continuously</span>';
-
   } catch (err) {
     alert('Please allow microphone access');
   }
 }
-
 async function processRecording() {
   const name = document.getElementById('userName').value.trim() || 'Anon';
   const transcript = document.getElementById('vTranscript').value.trim();
@@ -361,15 +322,12 @@ async function processRecording() {
   const accName = document.getElementById('accountName').value.trim();
   const accNumber = document.getElementById('accountNumber').value.trim();
   const bank = document.getElementById('bankName').value.trim();
-
   if (!audioBlob) {
     resetUI();
     return;
   }
-
   const quality = checkQuality(transcript, speakingTime);
   let status, approved, qual, note;
-
   if (!quality.ok) {
     status = 'BROKEN';
     approved = 0;
@@ -380,22 +338,20 @@ async function processRecording() {
     status = 'GOOD';
     approved = speakingTime;
     qual = 90;
-    note = `✅ APPROVED: ${Math.round(speakingTime)} seconds of real talking`;
-    document.getElementById('recStatus').innerHTML = `✅ Accepted!<br><span class="small">${Math.round(speakingTime)} seconds saved</span>`;
+    note = `✅ SAVED: ${Math.round(speakingTime)} seconds - Wait for admin to check your Pidgin voice`;
+    document.getElementById('recStatus').innerHTML = `✅ Your ${Math.round(speakingTime)} secs don save!<br><div style="background: rgba(241,196,15,0.25); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>`;
   }
-
   try {
-    const fileName = `\( {Date.now()}_ \){name.replace(/\s+/g, '_')}.webm`;
+    const fileName = `${Date.now()}_${name.replace(/\s+/g, '_')}.webm`;
     await sb.storage.from('voices').upload(fileName, audioBlob);
     const { data: urlData } = sb.storage.from('voices').getPublicUrl(fileName);
-
     await sb.from('voices').insert([{
       name: name,
       user_name: name,
       title: `${name} - ${(speakingTime/60).toFixed(1)}m - ${status}`,
       transcript: transcript || '(No transcript)',
       location: location,
-      duration_seconds: (Date.now() - startTime) / 1000,
+      duration_seconds: speakingTime,
       approved_duration_seconds: approved,
       audio_url: urlData.publicUrl,
       quality_score: qual,
@@ -405,16 +361,13 @@ async function processRecording() {
       account_number: accNumber,
       bank_name: bank
     }]);
-
     loadMyVoices();
     loadMyHours();
   } catch (err) {
     alert('Save failed. Please try again.\n' + err.message);
   }
-
   resetUI();
 }
-
 function resetUI() {
   isRecording = false;
   document.getElementById('recBtn').innerText = '🔴 START RECORDING';
@@ -423,55 +376,49 @@ function resetUI() {
   speakingTime = 0;
   updateProgress();
 }
-
 async function loadMyVoices() {
   const myName = localStorage.getItem('pidgin_user_name') || '';
   if (!myName) {
     document.getElementById('myVoices').innerHTML = '<p class="small">Enter your name and record first</p>';
     return;
   }
-
   let { data } = await sb.from('voices').select('*').eq('name', myName).order('created_at', { ascending: false }).limit(30);
   if (!data || data.length === 0) {
     const r2 = await sb.from('voices').select('*').eq('user_name', myName).order('created_at', { ascending: false }).limit(30);
     data = r2.data;
   }
-
   if (!data || data.length === 0) {
     document.getElementById('myVoices').innerHTML = '<p class="small">No recordings yet.</p>';
     return;
   }
-
   document.getElementById('myVoices').innerHTML = data.map(v => {
     const isGood = v.status === 'GOOD';
     const appMin = (parseFloat(v.approved_duration_seconds || 0) / 60).toFixed(1);
     return `
-      <div class="voice-item" style="border-left-color: ${isGood ? '#2ed573' : '#ff4757'}">
+      <div class="voice-item" style="border-left-color: ${isGood? '#2ed573' : '#ff4757'}">
         <div>
           <strong>${v.name || 'Voice'}</strong>
-          <span class="badge \( {isGood ? 'good' : 'bad'}"> \){v.status}</span>
+          <span class="badge ${isGood? 'good' : 'bad'}">${v.status}</span>
         </div>
         <div style="margin: 6px 0; font-size: 14px;">Approved: <b>${appMin} mins</b></div>
+        <div style="background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin: 8px 0; font-size: 13px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>
         <div class="small">${v.inspector_note || ''}</div>
         <audio controls src="${v.audio_url}"></audio>
       </div>
     `;
   }).join('');
 }
-
 async function loadMyHours() {
   const myName = localStorage.getItem('pidgin_user_name') || '';
   if (!myName) {
     document.getElementById('myHoursText').innerHTML = 'Enter your name to see balance';
     return;
   }
-
   let { data } = await sb.from('voices').select('*').eq('name', myName).limit(300);
   if (!data || data.length === 0) {
     const r2 = await sb.from('voices').select('*').eq('user_name', myName).limit(300);
     data = r2.data;
   }
-
   let approvedSeconds = 0;
   let good = 0, bad = 0;
   if (data && data.length) {
@@ -481,11 +428,9 @@ async function loadMyHours() {
       else bad++;
     });
   }
-
   const approvedMinutes = approvedSeconds / 60;
   const remaining = Math.max(0, TARGET_MINUTES - approvedMinutes);
   const progressPercent = Math.min((approvedMinutes / TARGET_MINUTES) * 100, 100);
-
   let message = '';
   if (approvedMinutes >= TARGET_MINUTES) {
     message = `<div style="background:#2ed573; color:#000; padding:10px; border-radius:10px; font-weight:800; margin-top:8px;">
@@ -496,7 +441,6 @@ async function loadMyHours() {
       You still need <b>${remaining.toFixed(1)} more minutes</b> to earn ₦500
     </div>`;
   }
-
   document.getElementById('myHoursText').innerHTML = `
     <div>Approved Time: <b>${approvedMinutes.toFixed(1)} minutes</b></div>
     <div style="margin: 6px 0;">Good recordings: ${good} | Rejected: ${bad}</div>
@@ -506,8 +450,6 @@ async function loadMyHours() {
     ${message}
   `;
 }
-
-// Init
 loadMyVoices();
 loadMyHours();
 </script>
