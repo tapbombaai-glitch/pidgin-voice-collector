@@ -15,6 +15,7 @@ body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:
 .btn-yellow{background:#f1c40f;color:#000}
 .top{background:linear-gradient(135deg,#667eea,#764ba2);padding:14px;border-radius:12px;text-align:center;margin-bottom:12px;border:2px solid #f1c40f}
 .playBtn{background:#3b82f6;color:#fff;padding:6px 12px;border-radius:20px;border:none;font-size:12px}
+textarea{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #555;font-size:14px;min-height:70px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -28,14 +29,65 @@ body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:
 <button class="btn btn-red" onclick="filter='REJECTED';load()">Bad</button>
 </div>
 </div>
+
+<div class="card" style="border:2px solid #f1c40f;background:rgba(241,196,15,0.15)">
+<div style="font-weight:800;color:#f1c40f">📢 ANNOUNCEMENT FOR WORKERS</div>
+<textarea id="announceText" placeholder="Type announcement here e.g: Omo today, if you talk better Pidgin without insult, we go double your pay! Minimum 2 mins still remain."></textarea>
+<div style="display:flex;gap:6px;margin-top:8px">
+<button class="btn btn-yellow" style="flex:1" onclick="saveAnnounce()">📢 Post Announcement</button>
+<button class="btn" style="flex:1;background:#444;color:#fff" onclick="clearAnnounce()">Clear</button>
+</div>
+<div id="announceStatus" style="font-size:11px;margin-top:6px;opacity:0.8"></div>
+<div id="currentAnnounce" style="margin-top:8px;background:rgba(0,0,0,0.3);padding:8px;border-radius:8px;font-size:12px"></div>
+</div>
+
 <div id="list">Loading voices...</div>
 
 <script>
 const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
-const RATE=500/5400; // ₦0.09259 per sec
+const RATE=500/5400;
 let filter='UNCHECKED';
+
+async function saveAnnounce(){
+const text=document.getElementById('announceText').value.trim();
+if(!text){alert('Type announcement first');return}
+document.getElementById('announceStatus').innerText='Posting...';
+try{
+const {error}=await sb.from('announcements').insert([{message:text}]);
+if(error){
+ // if table no exist, use localStorage as backup
+ localStorage.setItem('ademi_announcement',text);
+ document.getElementById('announceStatus').innerText='✅ Saved locally (create announcements table for all users)';
+}else{
+ document.getElementById('announceStatus').innerText='✅ Posted for all workers!';
+}
+loadAnnounce();
+}catch(e){
+ localStorage.setItem('ademi_announcement',text);
+ document.getElementById('announceStatus').innerText='✅ Saved locally: '+e.message;
+ loadAnnounce();
+}
+}
+
+async function clearAnnounce(){
+if(!confirm('Clear announcement?'))return;
+localStorage.removeItem('ademi_announcement');
+try{await sb.from('announcements').delete().neq('id','00000000-0000-0000-0000-000000000000');}catch(e){}
+document.getElementById('announceText').value='';
+document.getElementById('currentAnnounce').innerHTML='';
+document.getElementById('announceStatus').innerText='Cleared';
+}
+
+async function loadAnnounce(){
+let text=localStorage.getItem('ademi_announcement')||'';
+try{
+const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
+if(data&&data[0]) text=data[0].message;
+}catch(e){}
+if(text) document.getElementById('currentAnnounce').innerHTML='<b>Current:</b> '+text;
+}
 
 async function load(){
 let q=sb.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
@@ -46,7 +98,6 @@ let totalSecs=0,totalPay=0,waiting=0;
 data.forEach(v=>{totalSecs+=parseFloat(v.duration_seconds||0); if(v.status=='UNCHECKED')waiting++});
 totalPay=totalSecs*RATE;
 document.getElementById('stats').innerHTML=`Total: ${data.length} voices • ${Math.floor(totalSecs)}s • <b>₦${totalPay.toFixed(2)}</b> to pay • Waiting: ${waiting}`;
-
 document.getElementById('list').innerHTML=data.map(v=>{
 const secs=Math.round(v.duration_seconds||0);
 const earn=secs*RATE;
@@ -56,31 +107,21 @@ return `<div class="card">
 <div><b>${v.name||v.user_name}</b> <span style="font-size:11px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
 <button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
 </div>
-<div style="font-size:12px;opacity:0.8;margin:6px 0">${secs}s recorded • ${v.location||'No location'} • ${bank}</div>
+<div style="font-size:11px;opacity:0.8;margin:4px 0">${secs}s • ${v.location||''} • ${bank}</div>
 <audio id="a${v.id}" src="${v.audio_url}" style="display:none"></audio>
-<div style="display:flex;gap:6px;margin-top:8px">
-<button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">APPROVE FULL</button>
+<div style="display:flex;gap:4px;margin-top:6px">
+<input id="adj${v.id}" type="number" value="${secs}" style="width:70px;padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555">
+<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">Adjust</button>
+<button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">APPROVE</button>
 <button class="btn btn-red" style="flex:1" onclick="reject('${v.id}')">REJECT</button>
-<button class="btn" style="background:#444;color:#fff" onclick="del('${v.id}')">DELETE</button>
 </div>
 </div>`;
 }).join('');
 }
-
-async function approve(id,secs){
-await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs,quality_score:Math.round(secs*RATE*100)}).eq('id',id);
-load();
-}
-async function reject(id){
-await sb.from('voices').update({status:'REJECTED'}).eq('id',id);
-load();
-}
-async function del(id){
-if(!confirm('Delete this?'))return;
-await sb.from('voices').delete().eq('id',id);
-load();
-}
-load();
+async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs,quality_score:Math.round(secs*RATE*100)}).eq('id',id);load();}
+async function adjust(id){const val=parseInt(document.getElementById('adj'+id).value); if(isNaN(val)||val<=0){alert('Put correct secs');return} await sb.from('voices').update({status:'QUALIFIED',duration_seconds:val,approved_duration_seconds:val,quality_score:Math.round(val*RATE*100),inspector_note:`Chairman adjust: Approved ${val}s only - bad part removed`}).eq('id',id);load();}
+async function reject(id){await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();}
+load();loadAnnounce();
 </script>
 </body>
 </html>
