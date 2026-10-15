@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chairman Admin - Ademi</title>
+<title>Chairman Admin - Ademi DELETE</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:520px;margin:auto}
 .card{background:rgba(255,255,255,0.08);border-radius:12px;padding:10px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.12)}
-.btn{padding:10px 14px;border-radius:8px;border:none;font-weight:800;cursor:pointer;font-size:13px}
+.btn{padding:10px 14px;border-radius:8px;border:none;font-weight:800;cursor:pointer;font-size:11px}
 .btn-green{background:#2ed573;color:#000}
 .btn-red{background:#ff4757;color:#fff}
 .btn-yellow{background:#f1c40f;color:#000}
@@ -19,6 +19,7 @@ body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:
 textarea{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #555;font-size:14px;min-height:70px;margin-top:8px}
 input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555;font-size:13px}
 .middleBox{display:none;background:rgba(0,0,0,0.45);border:2px dashed #f1c40f;border-radius:10px;padding:10px;margin-top:10px}
+.acctBox{background:#000;border:2px solid #2ed573;border-radius:10px;padding:10px;margin:8px 0}
 </style>
 </head>
 <body>
@@ -30,12 +31,13 @@ input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid 
 <button class="btn btn-yellow" onclick="filter='UNCHECKED';load()">Waiting</button>
 <button class="btn btn-green" onclick="filter='QUALIFIED';load()">Good</button>
 <button class="btn btn-red" onclick="filter='REJECTED';load()">Bad</button>
+<button class="btn btn-blue" onclick="filter='PAID';load()">PAID ✅</button>
 </div>
 </div>
 
 <div class="card" style="border:2px solid #f1c40f;background:rgba(241,196,15,0.15)">
 <div style="font-weight:800;color:#f1c40f">📢 ANNOUNCEMENT FOR WORKERS</div>
-<textarea id="announceText" placeholder="Type announcement here e.g: Omo today, if you talk better Pidgin without insult, we go double your pay! Minimum 2 mins still remain."></textarea>
+<textarea id="announceText" placeholder="Type announcement here"></textarea>
 <div style="display:flex;gap:6px;margin-top:8px">
 <button class="btn btn-yellow" style="flex:1" onclick="saveAnnounce()">📢 Post Announcement</button>
 <button class="btn" style="flex:1;background:#444;color:#fff" onclick="clearAnnounce()">Clear</button>
@@ -59,143 +61,111 @@ if(!text){alert('Type announcement first');return}
 document.getElementById('announceStatus').innerText='Posting...';
 try{
 const {error}=await sb.from('announcements').insert([{message:text}]);
-if(error){
- localStorage.setItem('ademi_announcement',text);
- document.getElementById('announceStatus').innerText='✅ Saved locally (create announcements table for all users)';
-}else{
- document.getElementById('announceStatus').innerText='✅ Posted for all workers!';
-}
+if(error){localStorage.setItem('ademi_announcement',text);document.getElementById('announceStatus').innerText='✅ Saved locally';}
+else{document.getElementById('announceStatus').innerText='✅ Posted!';}
 loadAnnounce();
-}catch(e){
- localStorage.setItem('ademi_announcement',text);
- document.getElementById('announceStatus').innerText='✅ Saved locally: '+e.message;
- loadAnnounce();
-}
+}catch(e){localStorage.setItem('ademi_announcement',text);loadAnnounce();}
 }
 async function clearAnnounce(){
 if(!confirm('Clear announcement?'))return;
 localStorage.removeItem('ademi_announcement');
 try{await sb.from('announcements').delete().neq('id','00000000-0000-0000-0000-000000000000');}catch(e){}
-document.getElementById('announceText').value='';
-document.getElementById('currentAnnounce').innerHTML='';
-document.getElementById('announceStatus').innerText='Cleared';
+document.getElementById('announceText').value='';document.getElementById('currentAnnounce').innerHTML='';document.getElementById('announceStatus').innerText='Cleared';
 }
 async function loadAnnounce(){
 let text=localStorage.getItem('ademi_announcement')||'';
-try{
-const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
-if(data&&data[0]) text=data[0].message;
-}catch(e){}
+try{const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);if(data&&data[0]) text=data[0].message;}catch(e){}
 if(text) document.getElementById('currentAnnounce').innerHTML='<b>Current:</b> '+text;
 }
 
 async function load(){
 let q=sb.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
-if(filter!='all') q=q.eq('status',filter);
+if(filter==='PAID') q=q.eq('is_paid',true);
+else if(filter!='all') q=q.eq('status',filter);
 const {data}=await q;
 if(!data){document.getElementById('list').innerHTML='No data';return}
-let totalSecs=0,totalPay=0,waiting=0;
-data.forEach(v=>{totalSecs+=parseFloat(v.duration_seconds||0); if(v.status=='UNCHECKED')waiting++});
-totalPay=totalSecs*RATE;
-document.getElementById('stats').innerHTML=`Total: ${data.length} voices • ${Math.floor(totalSecs)}s • <b>₦${totalPay.toFixed(2)}</b> to pay • Waiting: ${waiting}`;
+let totalSecs=0,waiting=0,toPay=0;
+data.forEach(v=>{totalSecs+=parseFloat(v.duration_seconds||0); if(v.status=='UNCHECKED')waiting++; if(v.status=='QUALIFIED' &&!v.is_paid) toPay+=(parseFloat(v.approved_duration_seconds||v.duration_seconds))*RATE});
+document.getElementById('stats').innerHTML=`Total: ${data.length} • ${Math.floor(totalSecs)}s • Waiting: ${waiting} • <b style="color:#2ed573">TO PAY: ₦${toPay.toFixed(2)}</b>`;
 document.getElementById('list').innerHTML=data.map(v=>{
 const secs=Math.round(v.duration_seconds||0);
-const earn=secs*RATE;
-const bank=`${v.account_name||''} ${v.account_number||''} ${v.bank_name||''}`;
+const appr=Math.round(v.approved_duration_seconds||secs);
+const earn=appr*RATE;
+const accName = v.account_name || v.name || 'No Name';
+const accNo = v.account_number || v.bank_account || v.account_no || '';
+const bank = v.bank_name || v.bank || 'Moni Point';
 return `<div class="card" id="card-${v.id}">
 <div style="display:flex;justify-content:space-between;align-items:center">
-<div><b>${v.name||v.user_name}</b> <span style="font-size:11px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span> <span style="font-size:10px">ORIG ${secs}s</span></div>
+<div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
 <button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
 </div>
-<div style="font-size:11px;opacity:0.8;margin:4px 0">${secs}s • ${v.location||''} • ${bank}</div>
-<audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
 
+<div class="acctBox">
+<div style="font-size:10px;color:#f1c40f;font-weight:900">💳 ACCOUNT TO PAY - BIG</div>
+<div><span style="font-size:10px;color:#aaa">NAME:</span> <b style="font-size:14px;color:#fff">${accName}</b></div>
+<div><span style="font-size:10px;color:#aaa">NUMBER:</span> <b style="font-size:18px;color:#2ed573">${accNo}</b> <button class="btn btn-blue" style="padding:3px 8px" onclick="copyText('${accNo}')">COPY</button></div>
+<div style="font-size:11px"><span style="color:#aaa">BANK:</span> ${bank} • ${secs}s • ${v.location||''}</div>
+<div style="display:flex;gap:5px;margin-top:8px">
+<button class="btn btn-green" style="flex:1" onclick="markPaid('${v.id}','${v.name||''}','${accName}','${accNo}','${bank}',${earn.toFixed(2)})">PAID ✅ + SAVE</button>
+<button class="btn btn-red" style="flex:1" onclick="deleteVoice('${v.id}')">🗑️ DELETE</button>
+</div>
+</div>
+
+<audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
 <div style="display:flex;gap:4px;margin-top:8px">
-<input id="adj-${v.id}" type="number" value="${secs}" style="width:65px;border:2px solid #f1c40f;text-align:center">
-<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">✂️ CUT END</button>
+<input id="adj-${v.id}" type="number" value="${secs}" style="width:55px;border:2px solid #f1c40f;text-align:center">
+<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">CUT END</button>
 <button class="btn btn-blue" style="flex:1;font-size:11px" onclick="toggleMiddle('${v.id}')">MIDDLE</button>
 <button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">ALL GOOD</button>
 <button class="btn btn-red" style="flex:1" onclick="reject('${v.id}')">REJECT</button>
 </div>
-
 <div id="middle-${v.id}" class="middleBox">
 <div style="font-weight:800;color:#f1c40f;font-size:13px">✂️ MIDDLE CUT - 3 BOXES</div>
-<div style="font-size:11px;opacity:0.8;margin:4px 0">Total ${secs}s - If bad dey middle, fill here. Eg good 0-40, bad 40-70, good 70-127</div>
-<div style="display:flex;gap:5px">
-<div style="flex:1"><label style="font-size:9px">FIRST GOOD 0-?</label><input id="fg-${v.id}" type="number" placeholder="e.g 40" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
-<div style="flex:1"><label style="font-size:9px;color:#ff6b81">BAD MIDDLE?-?</label><input id="bad-${v.id}" type="number" placeholder="e.g 30" style="width:100%;border-color:#ff4757" oninput="calcMiddle('${v.id}')"></div>
-<div style="flex:1"><label style="font-size:9px">SECOND GOOD?-END</label><input id="sg-${v.id}" type="number" placeholder="e.g 57" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
+<div style="display:flex;gap:5px;margin-top:6px">
+<div style="flex:1"><label style="font-size:9px">FIRST GOOD</label><input id="fg-${v.id}" type="number" placeholder="40" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
+<div style="flex:1"><label style="font-size:9px;color:#ff6b81">BAD</label><input id="bad-${v.id}" type="number" placeholder="30" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
+<div style="flex:1"><label style="font-size:9px">SECOND GOOD</label><input id="sg-${v.id}" type="number" placeholder="57" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
 </div>
-<textarea id="note-${v.id}" placeholder="Why bad? e.g insult from 40s-70s" style="min-height:40px;margin-top:6px"></textarea>
-<div id="calc-${v.id}" style="background:#111;padding:8px;border-radius:6px;margin-top:6px;font-size:11px;font-weight:800;color:#2ed573">Fill boxes to see approved</div>
-<button class="btn btn-yellow" style="width:100%;margin-top:8px" onclick="approveMiddle('${v.id}',${secs})">✅ APPROVE MIDDLE CUT</button>
+<textarea id="note-${v.id}" placeholder="Why bad?" style="min-height:40px;margin-top:6px"></textarea>
+<div id="calc-${v.id}" style="background:#111;padding:8px;border-radius:6px;margin-top:6px;font-size:11px;font-weight:800;color:#2ed573">Fill boxes</div>
+<button class="btn btn-yellow" style="width:100%;margin-top:8px" onclick="approveMiddle('${v.id}',${secs})">✅ APPROVE MIDDLE</button>
 </div>
-
 <div id="msg-${v.id}" style="font-size:11px;margin-top:6px;font-weight:800;color:#2ed573"></div>
 </div>`;
 }).join('');
 }
 
-function toggleMiddle(id){
-const b=document.getElementById('middle-'+id);
-b.style.display=(b.style.display=='block')?'none':'block';
-}
+function toggleMiddle(id){const b=document.getElementById('middle-'+id);b.style.display=b.style.display=='block'?'none':'block';}
 function calcMiddle(id){
-const fg=parseInt(document.getElementById('fg-'+id).value)||0;
-const bad=parseInt(document.getElementById('bad-'+id).value)||0;
-const sg=parseInt(document.getElementById('sg-'+id).value)||0;
-const orig=parseInt(document.getElementById('adj-'+id).value)||0;
-const approved=fg+sg;
-const el=document.getElementById('calc-'+id);
-if(fg||sg){
-el.innerHTML=`ORIG: ${orig}s | GOOD ${fg}s + ${sg}s = <b>${approved}s = ₦${(approved*RATE).toFixed(2)}</b><br>❌ BAD REMOVED: ${bad}s`;
-}else el.innerHTML='Fill boxes to calculate';
+const fg=parseInt(document.getElementById('fg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const orig=parseInt(document.getElementById('adj-'+id).value)||0;const approved=fg+sg;
+document.getElementById('calc-'+id).innerHTML=approved>0?`ORIG ${orig}s | GOOD ${approved}s = ₦${(approved*RATE).toFixed(2)} | BAD ${bad}s comot`:'Fill boxes';
+}
+function copyText(t){navigator.clipboard.writeText(t);alert('Copied: '+t);}
+
+// DELETE FUNCTION - THIS IS WHAT YOU ASK
+async function deleteVoice(id){
+if(!confirm('DELETE this voice permanently? E go comot forever o!')) return;
+const {error}=await sb.from('voices').delete().eq('id',id);
+if(error) alert('❌ '+error.message);
+else{alert('✅ Deleted forever');load();}
 }
 
-async function approve(id,secs){
-const msg=document.getElementById('msg-'+id);
-msg.innerText='⏳ Approving...';
-const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs,quality_score:Math.round(secs*RATE*100),inspector_note:`APPROVED FULL ${secs}s = ₦${(secs*RATE).toFixed(2)}`}).eq('id',id);
-msg.innerText=error?'❌ '+error.message:`✅ Approved ${secs}s full = ₦${(secs*RATE).toFixed(2)}`;
-if(!error) setTimeout(load,1000);
-}
-
-async function adjust(id){
-const input=document.getElementById('adj-'+id);
-const msg=document.getElementById('msg-'+id);
-const val=parseInt(input.value);
-if(isNaN(val)||val<=0){alert('Put correct secs');return}
-msg.innerText='⏳ Cutting end...';
+// PAID + SAVE TO HISTORY
+async function markPaid(id, name, accName, accNo, bank, amount){
+if(!confirm(`You don pay ${name} - ₦${amount}?\nMove to PAID HISTORY?`)) return;
 try{
-const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val,quality_score:Math.round(val*RATE*100),inspector_note:`Chairman CUT END: Original ${input.defaultValue}s, Approved ${val}s only - bad end removed. Earn ₦${(val*RATE).toFixed(2)}`}).eq('id',id);
-if(error) throw error;
-msg.innerText=`✅ CUT END: Approved ${val}s = ₦${(val*RATE).toFixed(2)} - Bad end comot`;
-setTimeout(load,1200);
-}catch(e){
-msg.innerText='❌ '+e.message;
-alert('Failed: '+e.message);
-}
+let hist=JSON.parse(localStorage.getItem('chairman_paid_history')||'[]');
+hist.unshift({name, accName, accNo, bank, amount, date: new Date().toLocaleString()});
+localStorage.setItem('chairman_paid_history', JSON.stringify(hist));
+}catch(e){}
+try{await sb.from('voices').update({is_paid:true, paid_at:new Date().toISOString()}).eq('id',id);}catch(e){await sb.from('voices').update({is_paid:true}).eq('id',id);}
+alert('✅ Saved to PAID ✅ tab');load();
 }
 
-async function approveMiddle(id,orig){
-const fg=parseInt(document.getElementById('fg-'+id).value)||0;
-const bad=parseInt(document.getElementById('bad-'+id).value)||0;
-const sg=parseInt(document.getElementById('sg-'+id).value)||0;
-const note=document.getElementById('note-'+id).value||'Middle bad';
-const approved=fg+sg;
-if(approved<=0)return alert('Put First Good and Second Good');
-const msg=document.getElementById('msg-'+id);
-msg.innerText='⏳ Saving middle cut...';
-const fullNote=`MIDDLE CUT: Orig ${orig}s | GOOD 0-${fg}s=${fg}s | BAD ${fg}-${fg+bad}s=${bad}s REMOVED (${note}) | GOOD ${fg+bad}-${orig}s=${sg}s | APPROVED ${approved}s = ₦${(approved*RATE).toFixed(2)}`;
-const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:approved,quality_score:Math.round(approved*RATE*100),inspector_note:fullNote}).eq('id',id);
-msg.innerText=error?'❌ '+error.message:`✅ MIDDLE CUT: ${approved}s approved (${fg}+${sg}) - Bad ${bad}s comot! ₦${(approved*RATE).toFixed(2)}`;
-if(!error) setTimeout(load,1500);
-}
-
-async function reject(id){
-if(!confirm('Reject?'))return;
-await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();
-}
+async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs}).eq('id',id);load();}
+async function adjust(id){const val=parseInt(document.getElementById('adj-'+id).value);if(val<=0)return alert('Put secs');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val}).eq('id',id);load();}
+async function approveMiddle(id,orig){const fg=parseInt(document.getElementById('fg-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const approved=fg+sg;if(approved<=0)return alert('Fill boxes');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:approved,inspector_note:`MIDDLE CUT ${approved}s BAD ${bad}s removed`}).eq('id',id);load();}
+async function reject(id){if(!confirm('Reject?'))return;await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();}
 load();loadAnnounce();
 </script>
 </body>
