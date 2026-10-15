@@ -13,9 +13,12 @@ body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:
 .btn-green{background:#2ed573;color:#000}
 .btn-red{background:#ff4757;color:#fff}
 .btn-yellow{background:#f1c40f;color:#000}
+.btn-blue{background:#3b82f6;color:#fff}
 .top{background:linear-gradient(135deg,#667eea,#764ba2);padding:14px;border-radius:12px;text-align:center;margin-bottom:12px;border:2px solid #f1c40f}
 .playBtn{background:#3b82f6;color:#fff;padding:6px 12px;border-radius:20px;border:none;font-size:12px}
 textarea{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #555;font-size:14px;min-height:70px;margin-top:8px}
+input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555;font-size:13px}
+.middleBox{display:none;background:rgba(0,0,0,0.45);border:2px dashed #f1c40f;border-radius:10px;padding:10px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -57,7 +60,6 @@ document.getElementById('announceStatus').innerText='Posting...';
 try{
 const {error}=await sb.from('announcements').insert([{message:text}]);
 if(error){
- // if table no exist, use localStorage as backup
  localStorage.setItem('ademi_announcement',text);
  document.getElementById('announceStatus').innerText='✅ Saved locally (create announcements table for all users)';
 }else{
@@ -70,7 +72,6 @@ loadAnnounce();
  loadAnnounce();
 }
 }
-
 async function clearAnnounce(){
 if(!confirm('Clear announcement?'))return;
 localStorage.removeItem('ademi_announcement');
@@ -79,7 +80,6 @@ document.getElementById('announceText').value='';
 document.getElementById('currentAnnounce').innerHTML='';
 document.getElementById('announceStatus').innerText='Cleared';
 }
-
 async function loadAnnounce(){
 let text=localStorage.getItem('ademi_announcement')||'';
 try{
@@ -102,25 +102,100 @@ document.getElementById('list').innerHTML=data.map(v=>{
 const secs=Math.round(v.duration_seconds||0);
 const earn=secs*RATE;
 const bank=`${v.account_name||''} ${v.account_number||''} ${v.bank_name||''}`;
-return `<div class="card">
+return `<div class="card" id="card-${v.id}">
 <div style="display:flex;justify-content:space-between;align-items:center">
-<div><b>${v.name||v.user_name}</b> <span style="font-size:11px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
+<div><b>${v.name||v.user_name}</b> <span style="font-size:11px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span> <span style="font-size:10px">ORIG ${secs}s</span></div>
 <button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
 </div>
 <div style="font-size:11px;opacity:0.8;margin:4px 0">${secs}s • ${v.location||''} • ${bank}</div>
-<audio id="a${v.id}" src="${v.audio_url}" style="display:none"></audio>
-<div style="display:flex;gap:4px;margin-top:6px">
-<input id="adj${v.id}" type="number" value="${secs}" style="width:70px;padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555">
-<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">Adjust</button>
-<button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">APPROVE</button>
+<audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
+
+<div style="display:flex;gap:4px;margin-top:8px">
+<input id="adj-${v.id}" type="number" value="${secs}" style="width:65px;border:2px solid #f1c40f;text-align:center">
+<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">✂️ CUT END</button>
+<button class="btn btn-blue" style="flex:1;font-size:11px" onclick="toggleMiddle('${v.id}')">MIDDLE</button>
+<button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">ALL GOOD</button>
 <button class="btn btn-red" style="flex:1" onclick="reject('${v.id}')">REJECT</button>
 </div>
+
+<div id="middle-${v.id}" class="middleBox">
+<div style="font-weight:800;color:#f1c40f;font-size:13px">✂️ MIDDLE CUT - 3 BOXES</div>
+<div style="font-size:11px;opacity:0.8;margin:4px 0">Total ${secs}s - If bad dey middle, fill here. Eg good 0-40, bad 40-70, good 70-127</div>
+<div style="display:flex;gap:5px">
+<div style="flex:1"><label style="font-size:9px">FIRST GOOD 0-?</label><input id="fg-${v.id}" type="number" placeholder="e.g 40" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
+<div style="flex:1"><label style="font-size:9px;color:#ff6b81">BAD MIDDLE?-?</label><input id="bad-${v.id}" type="number" placeholder="e.g 30" style="width:100%;border-color:#ff4757" oninput="calcMiddle('${v.id}')"></div>
+<div style="flex:1"><label style="font-size:9px">SECOND GOOD?-END</label><input id="sg-${v.id}" type="number" placeholder="e.g 57" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
+</div>
+<textarea id="note-${v.id}" placeholder="Why bad? e.g insult from 40s-70s" style="min-height:40px;margin-top:6px"></textarea>
+<div id="calc-${v.id}" style="background:#111;padding:8px;border-radius:6px;margin-top:6px;font-size:11px;font-weight:800;color:#2ed573">Fill boxes to see approved</div>
+<button class="btn btn-yellow" style="width:100%;margin-top:8px" onclick="approveMiddle('${v.id}',${secs})">✅ APPROVE MIDDLE CUT</button>
+</div>
+
+<div id="msg-${v.id}" style="font-size:11px;margin-top:6px;font-weight:800;color:#2ed573"></div>
 </div>`;
 }).join('');
 }
-async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs,quality_score:Math.round(secs*RATE*100)}).eq('id',id);load();}
-async function adjust(id){const val=parseInt(document.getElementById('adj'+id).value); if(isNaN(val)||val<=0){alert('Put correct secs');return} await sb.from('voices').update({status:'QUALIFIED',duration_seconds:val,approved_duration_seconds:val,quality_score:Math.round(val*RATE*100),inspector_note:`Chairman adjust: Approved ${val}s only - bad part removed`}).eq('id',id);load();}
-async function reject(id){await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();}
+
+function toggleMiddle(id){
+const b=document.getElementById('middle-'+id);
+b.style.display=(b.style.display=='block')?'none':'block';
+}
+function calcMiddle(id){
+const fg=parseInt(document.getElementById('fg-'+id).value)||0;
+const bad=parseInt(document.getElementById('bad-'+id).value)||0;
+const sg=parseInt(document.getElementById('sg-'+id).value)||0;
+const orig=parseInt(document.getElementById('adj-'+id).value)||0;
+const approved=fg+sg;
+const el=document.getElementById('calc-'+id);
+if(fg||sg){
+el.innerHTML=`ORIG: ${orig}s | GOOD ${fg}s + ${sg}s = <b>${approved}s = ₦${(approved*RATE).toFixed(2)}</b><br>❌ BAD REMOVED: ${bad}s`;
+}else el.innerHTML='Fill boxes to calculate';
+}
+
+async function approve(id,secs){
+const msg=document.getElementById('msg-'+id);
+msg.innerText='⏳ Approving...';
+const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs,quality_score:Math.round(secs*RATE*100),inspector_note:`APPROVED FULL ${secs}s = ₦${(secs*RATE).toFixed(2)}`}).eq('id',id);
+msg.innerText=error?'❌ '+error.message:`✅ Approved ${secs}s full = ₦${(secs*RATE).toFixed(2)}`;
+if(!error) setTimeout(load,1000);
+}
+
+async function adjust(id){
+const input=document.getElementById('adj-'+id);
+const msg=document.getElementById('msg-'+id);
+const val=parseInt(input.value);
+if(isNaN(val)||val<=0){alert('Put correct secs');return}
+msg.innerText='⏳ Cutting end...';
+try{
+const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val,quality_score:Math.round(val*RATE*100),inspector_note:`Chairman CUT END: Original ${input.defaultValue}s, Approved ${val}s only - bad end removed. Earn ₦${(val*RATE).toFixed(2)}`}).eq('id',id);
+if(error) throw error;
+msg.innerText=`✅ CUT END: Approved ${val}s = ₦${(val*RATE).toFixed(2)} - Bad end comot`;
+setTimeout(load,1200);
+}catch(e){
+msg.innerText='❌ '+e.message;
+alert('Failed: '+e.message);
+}
+}
+
+async function approveMiddle(id,orig){
+const fg=parseInt(document.getElementById('fg-'+id).value)||0;
+const bad=parseInt(document.getElementById('bad-'+id).value)||0;
+const sg=parseInt(document.getElementById('sg-'+id).value)||0;
+const note=document.getElementById('note-'+id).value||'Middle bad';
+const approved=fg+sg;
+if(approved<=0)return alert('Put First Good and Second Good');
+const msg=document.getElementById('msg-'+id);
+msg.innerText='⏳ Saving middle cut...';
+const fullNote=`MIDDLE CUT: Orig ${orig}s | GOOD 0-${fg}s=${fg}s | BAD ${fg}-${fg+bad}s=${bad}s REMOVED (${note}) | GOOD ${fg+bad}-${orig}s=${sg}s | APPROVED ${approved}s = ₦${(approved*RATE).toFixed(2)}`;
+const {error}=await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:approved,quality_score:Math.round(approved*RATE*100),inspector_note:fullNote}).eq('id',id);
+msg.innerText=error?'❌ '+error.message:`✅ MIDDLE CUT: ${approved}s approved (${fg}+${sg}) - Bad ${bad}s comot! ₦${(approved*RATE).toFixed(2)}`;
+if(!error) setTimeout(load,1500);
+}
+
+async function reject(id){
+if(!confirm('Reject?'))return;
+await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();
+}
 load();loadAnnounce();
 </script>
 </body>
