@@ -28,11 +28,15 @@
   audio { width: 100%; margin-top: 8px; height: 36px; }
 .small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
 .section-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #f1c40f; }
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
 </style>
 </head>
 <body>
 <h1>🎙️ Ademi Pidgin Voice</h1>
 <p class="subtitle">Talk minimum 2 minutes • Real Pidgin only • ₦500 per 90 mins</p>
+
+<div id="announceBox" style="display:none;background:linear-gradient(135deg,#f1c40f,#ff9a00);border:2px solid #fff;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;font-weight:900;color:#000;animation:pulse 2s infinite;box-shadow:0 4px 15px rgba(241,196,15,0.4);">📢 Loading announcement...</div>
+
 <div class="hours-card"><h3 style="margin-bottom: 8px;">💰 My Balance</h3><div id="myHoursText">Loading...</div></div>
 <div class="card">
   <div class="section-title">🏦 Your Bank Details (Compulsory)</div>
@@ -57,9 +61,9 @@ const SUPA_URL = "https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY = "sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const MIN_SECONDS = 120;
-const TARGET_SECONDS = 5400; // 90 mins
+const TARGET_SECONDS = 5400;
 const TARGET_PAY = 500;
-const RATE_PER_SECOND = TARGET_PAY / TARGET_SECONDS; // 0.092592...
+const RATE_PER_SECOND = TARGET_PAY / TARGET_SECONDS;
 let mediaRec = null;
 let chunks = [];
 let audioBlob = null;
@@ -91,6 +95,17 @@ function updateProgress(){
   document.getElementById('progressBar').style.width=percent+'%';
   const earn = speakingTime * RATE_PER_SECOND;
   document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} secs • ₦${earn.toFixed(2)}`;
+}
+
+async function showAnnouncement(){
+  try{
+    const {data} = await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);
+    if(data && data[0] && data[0].message){
+      const box = document.getElementById('announceBox');
+      box.style.display='block';
+      box.innerHTML='📢 CHAIRMAN ANNOUNCEMENT:<br><span style="font-size:16px;">'+data[0].message+'</span>';
+    }
+  }catch(e){ console.log('announce error',e) }
 }
 
 async function toggleRec(){
@@ -136,10 +151,9 @@ async function toggleRec(){
       analyser.getByteFrequencyData(data);
       let sum=0; for(let i=0;i<data.length;i++) sum+=data[i];
       const avg=sum/data.length;
-      const talking=avg>8; // lower threshold so 0 secs bug go comot
+      const talking=avg>8;
       const now=Date.now();
       const delta=(now-lastCheck)/1000;
-      // FIX: Even if quiet small, still count 30% time so timer no freeze
       if(talking) speakingTime+=delta; else speakingTime+=delta*0.3;
       lastCheck=now;
       updateProgress();
@@ -176,17 +190,14 @@ async function processRecording(){
   const bank=document.getElementById('bankName').value.trim();
   if(!audioBlob && chunks.length>0){ audioBlob = new Blob(chunks, {type:'audio/webm'}); }
   if(!audioBlob || audioBlob.size < 500){ document.getElementById('recStatus').innerHTML=`❌ No audio found<br><span class="small">Please record again</span>`; resetUI(); return; }
-
   if(speakingTime < MIN_SECONDS){
     document.getElementById('recStatus').innerHTML=`❌ You talked only ${Math.round(speakingTime)} secs<br><span class="small">You need 2 mins to qualify</span>`;
     resetUI(); return;
   }
-
   const status='UNCHECKED';
   const earning = speakingTime * RATE_PER_SECOND;
   const note=`⏳ Wait for admin - ${Math.round(speakingTime)} secs = ₦${earning.toFixed(2)} - QUALIFIED`;
   document.getElementById('recStatus').innerHTML=`✅ Your ${Math.round(speakingTime)} secs = ₦${earning.toFixed(2)} don save!<br><div style="background: rgba(241,196,15,0.25); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check • You don earn ₦${earning.toFixed(2)}</div>`;
-
   try{
     const fileName=`${Date.now()}_${name.replace(/\s+/g,'_')}.webm`;
     const {error:upErr} = await sb.storage.from('voices').upload(fileName, audioBlob, {contentType:'audio/webm'});
@@ -230,7 +241,8 @@ async function loadMyHours(){
   const remainPay = TARGET_PAY - totalEarn;
   document.getElementById('myHoursText').innerHTML=`<div style="font-size:28px;font-weight:900;color:#f1c40f">₦${totalEarn.toFixed(2)}</div><div>Recorded: <b>${Math.floor(totalSecs)} secs</b> / ${TARGET_SECONDS} secs</div><div style="margin: 6px 0;">${unchecked} voice(s) waiting admin • ${data?data.length:0} total</div><div style="background:rgba(0,0,0,0.3); border-radius:10px; height:14px; margin:10px 0;"><div style="background:linear-gradient(90deg,#f1c40f,#2ed573); height:100%; width:${percent}%; border-radius:10px;"></div></div><div style="font-size:12px">Progress to ₦${TARGET_PAY}: ${percent.toFixed(1)}% • Remain ₦${Math.max(0,remainPay).toFixed(2)} to complete 90mins</div>`;
 }
-loadMyVoices(); loadMyHours();
+loadMyVoices(); loadMyHours(); showAnnouncement();
+setInterval(showAnnouncement, 10000);
 </script>
 </body>
 </html>
