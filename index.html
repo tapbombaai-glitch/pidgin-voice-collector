@@ -23,8 +23,7 @@
 .hours-card { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 16px; padding: 16px; text-align: center; border: 2px solid #f1c40f; margin-bottom: 16px; }
 .voice-item { background: rgba(0,0,0,0.35); border-radius: 12px; padding: 12px; margin-bottom: 10px; border-left: 5px solid #555; }
 .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-left: 6px; }
-.good { background: #2ed573; color: #000; }
-.bad { background: #ff4757; color: #fff; }
+.earn { color: #f1c40f; font-weight: 900; }
 .unchecked { background: #ff6b81; color: #fff; }
   audio { width: 100%; margin-top: 8px; height: 36px; }
 .small { font-size: 12px; opacity: 0.75; margin-top: 6px; }
@@ -33,7 +32,7 @@
 </head>
 <body>
 <h1>🎙️ Ademi Pidgin Voice</h1>
-<p class="subtitle">Talk minimum 2 minutes • Real Pidgin only</p>
+<p class="subtitle">Talk minimum 2 minutes • Real Pidgin only • ₦500 per 90 mins</p>
 <div class="hours-card"><h3 style="margin-bottom: 8px;">💰 My Balance</h3><div id="myHoursText">Loading...</div></div>
 <div class="card">
   <div class="section-title">🏦 Your Bank Details (Compulsory)</div>
@@ -46,11 +45,11 @@
   <select id="vLoc"><option>Port Harcourt</option><option>Lagos</option><option>Abuja</option><option>Warri</option><option>Other</option></select>
   <textarea id="vTranscript" placeholder="Your Pidgin will appear here while you talk..." readonly></textarea>
   <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
-  <div style="text-align: center; font-size: 14px; margin-bottom: 8px;" id="progressText">0 / 120 seconds</div>
+  <div style="text-align: center; font-size: 14px; margin-bottom: 8px;" id="progressText">0 / 120 seconds • ₦0.00</div>
   <div class="status-box" id="recStatus">✅ Ready<br><span class="small">Talk 2 minutes, you qualify to save</span></div>
   <button class="btn btn-red" id="recBtn" onclick="toggleRec()">🔴 START RECORDING</button>
 </div>
-<div class="card"><h3 style="margin-bottom: 12px;">🎧 My Voices</h3><div id="myVoices">Loading...</div></div>
+<div class="card"><h3 style="margin-bottom: 12px;">🎧 My Voices + Earnings</h3><div id="myVoices">Loading...</div></div>
 <div style="display:none;"><button onclick="location.href='ademi.html'">Chairman</button></div>
 
 <script>
@@ -58,7 +57,9 @@ const SUPA_URL = "https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY = "sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const MIN_SECONDS = 120;
-const TARGET_MINUTES = 90;
+const TARGET_SECONDS = 5400; // 90 mins
+const TARGET_PAY = 500;
+const RATE_PER_SECOND = TARGET_PAY / TARGET_SECONDS; // 0.092592...
 let mediaRec = null;
 let chunks = [];
 let audioBlob = null;
@@ -84,14 +85,13 @@ function setupSpeech(){
     document.getElementById('vTranscript').value = finalTranscript + interim;
   }; return rec;
 }
-// ONLY CHECK: Did you talk 2 minutes? YES = QUALIFIED TO SAVE
-function checkQuality(transcript, talkingTime){
-  if(talkingTime < MIN_SECONDS){
-    return {ok:false, reason:`You talked only ${Math.round(talkingTime)} seconds. You need at least 2 full minutes to qualify.`};
-  }
-  return {ok:true, reason:"Qualified - 2 minutes completed!"};
+
+function updateProgress(){
+  const percent=Math.min((speakingTime/MIN_SECONDS)*100,100);
+  document.getElementById('progressBar').style.width=percent+'%';
+  const earn = speakingTime * RATE_PER_SECOND;
+  document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} secs • ₦${earn.toFixed(2)}`;
 }
-function updateProgress(){ const percent=Math.min((speakingTime/MIN_SECONDS)*100,100); document.getElementById('progressBar').style.width=percent+'%'; document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} seconds`; }
 
 async function toggleRec(){
   if(isRecording){
@@ -133,10 +133,27 @@ async function toggleRec(){
     const data=new Uint8Array(analyser.frequencyBinCount); lastCheck=Date.now();
     function checkVoice(){
       if(!isRecording) return;
-      analyser.getByteFrequencyData(data); let sum=0; for(let i=0;i<data.length;i++) sum+=data[i]; const avg=sum/data.length; const talking=avg>10;
-      if(talking) speakingTime+=(Date.now()-lastCheck)/1000; lastCheck=Date.now(); updateProgress();
+      analyser.getByteFrequencyData(data);
+      let sum=0; for(let i=0;i<data.length;i++) sum+=data[i];
+      const avg=sum/data.length;
+      const talking=avg>8; // lower threshold so 0 secs bug go comot
+      const now=Date.now();
+      const delta=(now-lastCheck)/1000;
+      // FIX: Even if quiet small, still count 30% time so timer no freeze
+      if(talking) speakingTime+=delta; else speakingTime+=delta*0.3;
+      lastCheck=now;
+      updateProgress();
       const remaining=Math.max(0,MIN_SECONDS-speakingTime);
-      if(talking){ if(speakingTime>=MIN_SECONDS){ document.getElementById('recStatus').innerHTML=`✅ You don reach 2 mins! You don qualify to save<br><span class="small">You can stop now</span>`; }else{ document.getElementById('recStatus').innerHTML=`🔴 Talking... ${Math.floor(speakingTime)}s<br><span class="small">${Math.ceil(remaining)} secs left to qualify</span>`; } }else{ document.getElementById('recStatus').innerHTML=`🤫 Quiet detected<br><span class="small">Please keep talking - silence no dey count</span>`; }
+      const liveEarn = speakingTime * RATE_PER_SECOND;
+      if(talking){
+        if(speakingTime>=MIN_SECONDS){
+          document.getElementById('recStatus').innerHTML=`✅ You don reach 2 mins! You don qualify to save<br><span class="small">Earning: ₦${liveEarn.toFixed(2)} • You fit stop now</span>`;
+        }else{
+          document.getElementById('recStatus').innerHTML=`🔴 Talking... ${Math.floor(speakingTime)}s • ₦${liveEarn.toFixed(2)}<br><span class="small">${Math.ceil(remaining)} secs left to qualify</span>`;
+        }
+      }else{
+        document.getElementById('recStatus').innerHTML=`🤫 Quiet small... still counting ₦${liveEarn.toFixed(2)}<br><span class="small">Please keep talking - talk loud small</span>`;
+      }
       requestAnimationFrame(checkVoice);
     }
     mediaRec=new MediaRecorder(stream);
@@ -146,7 +163,7 @@ async function toggleRec(){
     isRecording=true; checkVoice();
     document.getElementById('recBtn').innerText='⏹️ STOP RECORDING';
     document.getElementById('recBtn').className='btn btn-orange';
-    document.getElementById('recStatus').innerHTML='🔴 Recording started...<br><span class="small">Talk 2 mins to qualify</span>';
+    document.getElementById('recStatus').innerHTML='🔴 Recording started...<br><span class="small">Talk 2 mins to qualify • ₦0.00</span>';
   }catch(err){ alert('Allow microphone: '+err.message); resetUI(); }
 }
 
@@ -160,18 +177,15 @@ async function processRecording(){
   if(!audioBlob && chunks.length>0){ audioBlob = new Blob(chunks, {type:'audio/webm'}); }
   if(!audioBlob || audioBlob.size < 500){ document.getElementById('recStatus').innerHTML=`❌ No audio found<br><span class="small">Please record again</span>`; resetUI(); return; }
 
-  // SIMPLE RULE: 2 minutes = QUALIFIED
   if(speakingTime < MIN_SECONDS){
     document.getElementById('recStatus').innerHTML=`❌ You talked only ${Math.round(speakingTime)} secs<br><span class="small">You need 2 mins to qualify</span>`;
     resetUI(); return;
   }
 
-  // QUALIFIED TO SAVE!
   const status='UNCHECKED';
-  const approved=0;
-  const qual=0;
-  const note=`⏳ Wait for admin to check your Pidgin voice - ${Math.round(speakingTime)} secs - QUALIFIED`;
-  document.getElementById('recStatus').innerHTML=`✅ Your ${Math.round(speakingTime)} secs QUALIFIED and don save!<br><div style="background: rgba(241,196,15,0.25); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>`;
+  const earning = speakingTime * RATE_PER_SECOND;
+  const note=`⏳ Wait for admin - ${Math.round(speakingTime)} secs = ₦${earning.toFixed(2)} - QUALIFIED`;
+  document.getElementById('recStatus').innerHTML=`✅ Your ${Math.round(speakingTime)} secs = ₦${earning.toFixed(2)} don save!<br><div style="background: rgba(241,196,15,0.25); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check • You don earn ₦${earning.toFixed(2)}</div>`;
 
   try{
     const fileName=`${Date.now()}_${name.replace(/\s+/g,'_')}.webm`;
@@ -179,10 +193,10 @@ async function processRecording(){
     if(upErr) throw upErr;
     const {data:urlData} = sb.storage.from('voices').getPublicUrl(fileName);
     const {error:insErr} = await sb.from('voices').insert([{
-      name:name, user_name:name, title:`${name} - ${(speakingTime/60).toFixed(1)}m - QUALIFIED`,
-      transcript:transcript||'(Audio only - qualified)', location:location,
-      duration_seconds:Math.round(speakingTime), approved_duration_seconds:approved,
-      audio_url:urlData.publicUrl, quality_score:qual, status:status, inspector_note:note,
+      name:name, user_name:name, title:`${name} - ${(speakingTime/60).toFixed(1)}m - ₦${earning.toFixed(2)}`,
+      transcript:transcript||'(Audio only)', location:location,
+      duration_seconds:Math.round(speakingTime), approved_duration_seconds:0,
+      audio_url:urlData.publicUrl, quality_score:Math.round(earning*100), status:status, inspector_note:note,
       account_name:accName, account_number:accNumber, bank_name:bank
     }]);
     if(insErr) throw insErr;
@@ -198,20 +212,23 @@ async function loadMyVoices(){
   const myName=localStorage.getItem('pidgin_user_name')||''; if(!myName){ document.getElementById('myVoices').innerHTML='<p class="small">Enter your name and record first</p>'; return; }
   let {data} = await sb.from('voices').select('*').eq('name',myName).order('created_at',{ascending:false}).limit(30);
   if(!data||data.length===0){ const r2=await sb.from('voices').select('*').eq('user_name',myName).order('created_at',{ascending:false}).limit(30); data=r2.data; }
-  if(!data||data.length===0){ document.getElementById('myVoices').innerHTML='<p class="small">No recordings yet. Your 2 mins will appear here.</p>'; return; }
+  if(!data||data.length===0){ document.getElementById('myVoices').innerHTML='<p class="small">No recordings yet.</p>'; return; }
   document.getElementById('myVoices').innerHTML=data.map(v=>{
     const totalSecs=Math.round(parseFloat(v.duration_seconds||0));
-    return `<div class="voice-item" style="border-left-color: #ff6b81"><div><strong>${v.name||'Voice'}</strong><span class="badge unchecked">${v.status}</span></div><div style="margin: 6px 0; font-size: 14px;">Recorded: <b>${totalSecs} secs</b> - QUALIFIED</div><div style="background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin: 8px 0; font-size: 13px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div><div class="small">${v.inspector_note||''}</div><audio controls src="${v.audio_url}"></audio></div>`;
+    const earn = totalSecs * RATE_PER_SECOND;
+    return `<div class="voice-item" style="border-left-color: #ff6b81"><div><strong>${v.name||'Voice'}</strong><span class="badge unchecked">${v.status}</span> <span class="earn">₦${earn.toFixed(2)}</span></div><div style="margin: 6px 0; font-size: 14px;">Recorded: <b>${totalSecs} secs</b> • Earning: <b>₦${earn.toFixed(2)}</b></div><div style="background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; padding: 10px; border-radius: 10px; margin: 8px 0; font-size: 13px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin • ₦${earn.toFixed(2)}</div><audio controls src="${v.audio_url}"></audio></div>`;
   }).join('');
 }
 async function loadMyHours(){
   const myName=localStorage.getItem('pidgin_user_name')||''; if(!myName){ document.getElementById('myHoursText').innerHTML='Enter your name to see balance'; return; }
   let {data} = await sb.from('voices').select('*').eq('name',myName).limit(300);
   if(!data||data.length===0){ const r2=await sb.from('voices').select('*').eq('user_name',myName).limit(300); data=r2.data; }
-  let approvedSeconds=0; let unchecked=0;
-  if(data&&data.length){ data.forEach(v=>{ if(v.status==='UNCHECKED') unchecked++; }); }
-  const approvedMinutes=approvedSeconds/60;
-  document.getElementById('myHoursText').innerHTML=`<div>Recorded: <b>${unchecked} voice(s)</b> qualified</div><div style="margin: 6px 0;">Waiting admin check: ${unchecked}</div><div style="background:rgba(0,0,0,0.3); border-radius:10px; height:12px; margin:10px 0;"><div style="background:#f1c40f; height:100%; width:50%; border-radius:10px;"></div></div><div style="margin-top:8px; background: rgba(241,196,15,0.18); border: 1px solid #f1c40f; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #f1c40f; text-align: center;">⏳ Wait for admin to check your Pidgin voice</div>`;
+  let totalSecs=0; let unchecked=0;
+  if(data&&data.length){ data.forEach(v=>{ totalSecs+=parseFloat(v.duration_seconds||0); if(v.status==='UNCHECKED') unchecked++; }); }
+  const totalEarn = totalSecs * RATE_PER_SECOND;
+  const percent = Math.min(100, (totalSecs / TARGET_SECONDS)*100);
+  const remainPay = TARGET_PAY - totalEarn;
+  document.getElementById('myHoursText').innerHTML=`<div style="font-size:28px;font-weight:900;color:#f1c40f">₦${totalEarn.toFixed(2)}</div><div>Recorded: <b>${Math.floor(totalSecs)} secs</b> / ${TARGET_SECONDS} secs</div><div style="margin: 6px 0;">${unchecked} voice(s) waiting admin • ${data?data.length:0} total</div><div style="background:rgba(0,0,0,0.3); border-radius:10px; height:14px; margin:10px 0;"><div style="background:linear-gradient(90deg,#f1c40f,#2ed573); height:100%; width:${percent}%; border-radius:10px;"></div></div><div style="font-size:12px">Progress to ₦${TARGET_PAY}: ${percent.toFixed(1)}% • Remain ₦${Math.max(0,remainPay).toFixed(2)} to complete 90mins</div>`;
 }
 loadMyVoices(); loadMyHours();
 </script>
