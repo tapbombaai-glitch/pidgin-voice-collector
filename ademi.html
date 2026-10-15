@@ -6,7 +6,7 @@
 <title>Ademi Admin Panel</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0f0c29;
@@ -17,15 +17,15 @@
     min-height: 100vh;
   }
   h1 { text-align: center; font-size: 22px; margin: 10px 0 4px; }
-  .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
-  .card {
+ .subtitle { text-align: center; font-size: 13px; opacity: 0.7; margin-bottom: 18px; }
+ .card {
     background: rgba(255,255,255,0.08);
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 16px;
     border: 1px solid rgba(255,255,255,0.12);
   }
-  .btn {
+ .btn {
     width: 100%;
     padding: 14px;
     border-radius: 12px;
@@ -45,15 +45,15 @@
     font-size: 15px;
     margin-bottom: 10px;
   }
-  .hidden { display: none !important; }
-  .badge {
+ .hidden { display: none!important; }
+ .badge {
     display: inline-block;
     padding: 3px 8px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: bold;
   }
-  .voice-card {
+ .voice-card {
     background: rgba(0,0,0,0.35);
     border-radius: 12px;
     padding: 14px;
@@ -61,23 +61,23 @@
     border-left: 6px solid #555;
   }
   audio { width: 100%; height: 36px; margin-top: 8px; }
-  .stats {
+ .stats {
     font-size: 14px;
     line-height: 1.5;
     margin: 8px 0 12px;
   }
-  .filter-row {
+ .filter-row {
     display: flex;
     gap: 8px;
     margin-bottom: 12px;
   }
-  .filter-row .btn { flex: 1; padding: 10px; font-size: 13px; }
+ .filter-row.btn { flex: 1; padding: 10px; font-size: 13px; }
 </style>
 </head>
 <body>
 
 <h1>👑 Ademi Admin Panel</h1>
-<p class="subtitle">Chairman Only • Auto Check & Manage Voices</p>
+<p class="subtitle">Chairman Only • Audit, Adjust, Approve & Delete</p>
 
 <!-- LOGIN -->
 <div id="login" class="card">
@@ -98,7 +98,7 @@
       🤖 RUN AUTOMATIC CHECK
     </button>
     <p style="font-size: 12px; opacity: 0.85; margin-top: 8px;">
-      This will check all voices, mark short/silent ones as BROKEN, give scores, and put the best ones on top.
+      New Logic: 2 mins = Qualified. Auto check will approve all 2 mins+ voices. You can still adjust or delete manually.
     </p>
   </div>
 
@@ -114,9 +114,10 @@
   <!-- Voice List -->
   <div class="card">
     <h3>🎧 All Voices</h3>
-    
+
     <div class="filter-row">
       <button class="btn" style="background: #fff; color: #000;" onclick="filterA('all')">All</button>
+      <button class="btn" style="background: #ff6b81; color: #fff;" onclick="filterA('unchecked')">⏳ Waiting</button>
       <button class="btn" style="background: #2ed573; color: #000;" onclick="filterA('good')">🟢 Good</button>
       <button class="btn" style="background: #ff4757; color: #fff;" onclick="filterA('bad')">🔴 Broken</button>
     </div>
@@ -139,7 +140,6 @@ const SUPA_URL = "https://rupuxvpupdhlhxgjrbsh.supabase.co";
 const SUPA_KEY = "sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-// Simple password (change this later)
 const ADMIN_PASS = "Ademi@2026Secure!";
 
 function login() {
@@ -153,57 +153,45 @@ function login() {
     alert('Wrong password');
   }
 }
+function logout() { location.reload(); }
 
-function logout() {
-  location.reload();
-}
-
-// Better automatic inspector
+// FIXED: Now checks duration_seconds, not approved_duration (because UNCHECKED has 0 approved)
 function inspectVoice(v) {
-  let d = parseFloat(v.duration_seconds || v.duration || 0) || 0;
-  let approved = parseFloat(v.approved_duration_seconds || 0) || 0;
+  let d = parseFloat(v.duration_seconds || 0) || 0;
   let txt = (v.transcript || '').trim().toLowerCase();
 
-  // Broken checks
-  if (!v.audio_url || d < 5) {
-    return { sc: 0, st: 'BROKEN', note: '🔴 BROKEN: No audio or too short' };
+  if (!v.audio_url || d < 10) {
+    return { sc: 0, st: 'BROKEN', note: '🔴 BROKEN: No audio or too short (<10s)', approved: 0 };
   }
-  if (approved < 90) {
-    return { sc: 10, st: 'BROKEN', note: '🔴 BROKEN: Less than 1.5 minutes of real talking' };
+  if (d < 60) {
+    return { sc: 10, st: 'BROKEN', note: '🔴 BROKEN: Less than 1 minute - did not qualify (need 2 mins)', approved: 0 };
   }
-  if (approved < 120) {
-    return { sc: 25, st: 'BROKEN', note: '🔴 BROKEN: Did not reach full 2 minutes' };
-  }
-  if (!txt || txt.length < 15) {
-    return { sc: 20, st: 'BROKEN', note: '🔴 BROKEN: Almost no speech detected' };
+  if (d < 120) {
+    return { sc: 30, st: 'BROKEN', note: '🔴 BROKEN: Did not reach 2 mins to qualify', approved: 0 };
   }
 
-  // Score calculation
-  let sc = 50;
-  if (approved >= 120) sc += 20;
-  if (approved >= 150) sc += 10;
-  if (approved >= 180) sc += 5;
+  // Qualified: 2 mins+
+  let sc = 70;
+  if (d >= 120) sc += 15;
+  if (d >= 150) sc += 10;
+  if (d >= 180) sc += 5;
 
-  // Pidgin keywords
   const pidgin = ['na', 'dey', 'abi', 'abeg', 'una', 'wey', 'sabi', 'waka', 'how far', 'oga', 'wetin', 'shebi', 'no be'];
   let hits = 0;
   pidgin.forEach(w => { if (txt.includes(w)) hits++; });
-  sc += Math.min(hits * 4, 20);
-
+  sc += Math.min(hits * 3, 15);
   if (txt.length > 80) sc += 5;
   if (sc > 98) sc = 98;
 
-  if (sc >= 75) return { sc, st: 'GOOD', note: '✅ GOOD: Clear + enough duration + Pidgin' };
-  if (sc >= 50) return { sc, st: 'WARNING', note: '🟡 FAIR: Acceptable but can be better' };
-  return { sc, st: 'BROKEN', note: '🔴 POOR quality' };
+  return { sc, st: 'GOOD', note: '✅ QUALIFIED: 2 mins+ - Approved by Auto Check', approved: Math.round(d) };
 }
 
 async function load() {
   try {
     const { data, error } = await sb.from('voices')
-      .select('*')
-      .order('quality_score', { ascending: false })
-      .limit(200);
+     .select('*')
+     .order('created_at', { ascending: false })
+     .limit(200);
 
     if (error) throw error;
 
@@ -213,46 +201,55 @@ async function load() {
       return;
     }
 
-    const good = data.filter(v => (v.quality_score || 0) >= 60).length;
-    const bad = data.filter(v => (v.quality_score || 0) < 60).length;
-    const broken = data.filter(v => v.status === 'BROKEN' || (v.quality_score || 0) < 25).length;
+    const good = data.filter(v => v.status === 'GOOD').length;
+    const unchecked = data.filter(v => v.status === 'UNCHECKED').length;
+    const broken = data.filter(v => v.status === 'BROKEN').length;
 
     document.getElementById('stats').innerHTML = `
-      Total: <b>${data.length}</b> &nbsp;|&nbsp;
-      ✅ Good: <b>${good}</b> &nbsp;|&nbsp;
-      🔴 Broken: <b>${broken}</b><br>
-      <small>Sorted by score (best first)</small>
+      Total: <b>${data.length}</b> | ⏳ Waiting: <b>${unchecked}</b> | ✅ Good: <b>${good}</b> | 🔴 Broken: <b>${broken}</b><br>
+      <small>Best: Waiting voices need your audit. You can adjust approved seconds.</small>
     `;
 
     document.getElementById('listA').innerHTML = data.map(v => {
       const score = v.quality_score || 0;
-      const col = score >= 75 ? '#2ed573' : score >= 45 ? '#ffa502' : '#ff4757';
-      const statusColor = v.status === 'BROKEN' ? '#ff4757' : v.status === 'GOOD' ? '#2ed573' : '#ffa502';
+      const col = v.status === 'GOOD'? '#2ed573' : v.status === 'UNCHECKED'? '#ff6b81' : '#ff4757';
+      const statusColor = v.status === 'GOOD'? '#2ed573' : v.status === 'UNCHECKED'? '#ff6b81' : '#ff4757';
+      const textColor = v.status === 'GOOD'? '#000' : '#fff';
 
       return `
-        <div class="voice-card vItem" data-sc="${score}" style="border-left-color: ${col}">
+        <div class="voice-card vItem" data-status="${v.status}" data-sc="${score}" style="border-left-color: ${col}">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong>${v.name || v.user_name || 'Anon'}</strong>
-            <span class="badge" style="background:\( {statusColor}; color: \){v.status==='GOOD'?'#000':'#fff'}">${v.status || 'UNCHECKED'}</span>
+            <span class="badge" style="background:${statusColor}; color: ${textColor}">${v.status || 'UNCHECKED'}</span>
           </div>
           <div style="margin: 6px 0;">
-            <b style="color:\( {col}"> \){score}%</b> 
-            <span style="font-size:13px; opacity:0.8;">• ${(v.approved_duration_seconds || 0).toFixed(0)}s approved</span>
+            <b style="color:${col}"> ${score}%</b>
+            <span style="font-size:13px; opacity:0.8;">• Recorded: ${(v.duration_seconds || 0).toFixed(0)}s | Approved: ${(v.approved_duration_seconds || 0).toFixed(0)}s</span>
           </div>
           <div style="font-size:12px; opacity:0.75; margin-bottom:6px;">
-            📍 ${v.location || 'No location'} • ${new Date(v.created_at).toLocaleDateString()}
+            📍 ${v.location || 'No location'} • ${new Date(v.created_at).toLocaleDateString()} • 🏦 ${v.bank_name||''} ${v.account_number||''} (${v.account_name||''})
           </div>
           <div style="background:rgba(255,255,255,0.07); padding:8px; border-radius:8px; font-size:13px; margin-bottom:8px;">
-            "${(v.transcript || 'No transcript').slice(0, 140)}"
+            "${(v.transcript || 'No transcript').slice(0, 200)}"
           </div>
           <div style="font-size:12px; background:rgba(255,255,0,0.12); padding:6px; border-radius:6px; margin-bottom:8px;">
-            🤖 ${v.inspector_note || v.ai_verdict || 'Not inspected yet'}
+            🤖 ${v.inspector_note || v.ai_verdict || '⏳ Wait for admin to check your Pidgin voice'}
           </div>
           <audio controls src="${v.audio_url}"></audio>
+
+          <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:10px; margin-top:10px;">
+            <div style="font-size:13px; margin-bottom:6px;">✏️ Adjust Approved Seconds:</div>
+            <div style="display:flex; gap:6px;">
+              <input type="number" id="adj-${v.id}" value="${Math.round(v.approved_duration_seconds || v.duration_seconds || 0)}" style="flex:1; margin-bottom:0;">
+              <button onclick="adjustVoice('${v.id}')" style="flex:1; background:#feca57; color:#000; border:none; padding:10px; border-radius:8px; font-weight:800;">Adjust & Approve</button>
+            </div>
+            <div style="font-size:11px; opacity:0.6; margin-top:4px;">If 120s recorded but 30s is silence, enter 90 and approve</div>
+          </div>
+
           <div style="display:flex; gap:6px; margin-top:10px;">
-            <button onclick="markGood('${v.id}')" style="flex:1; background:#2ed573; color:#000; border:none; padding:9px; border-radius:8px; font-weight:700;">✅ GOOD</button>
-            <button onclick="markBroken('${v.id}')" style="flex:1; background:#ff4757; color:#fff; border:none; padding:9px; border-radius:8px; font-weight:700;">🔴 BROKEN</button>
-            <button onclick="delV('${v.id}')" style="flex:1; background:#555; color:#fff; border:none; padding:9px; border-radius:8px;">🗑️</button>
+            <button onclick="markGood('${v.id}', ${Math.round(v.duration_seconds||0)})" style="flex:1; background:#2ed573; color:#000; border:none; padding:9px; border-radius:8px; font-weight:700;">✅ APPROVE FULL</button>
+            <button onclick="markBroken('${v.id}')" style="flex:1; background:#ff4757; color:#fff; border:none; padding:9px; border-radius:8px; font-weight:700;">🔴 REJECT</button>
+            <button onclick="delV('${v.id}', '${v.audio_url}')" style="flex:1; background:#555; color:#fff; border:none; padding:9px; border-radius:8px;">🗑️ DELETE</button>
           </div>
         </div>
       `;
@@ -263,16 +260,10 @@ async function load() {
 }
 
 async function autoInspectAll() {
-  if (!confirm('Run automatic check on all voices?\n\nThis will update scores and status.')) return;
-
+  if (!confirm('Run automatic check on all voices?\n\n- 2 mins+ will be marked GOOD and approved\n- Less than 2 mins will be BROKEN')) return;
   document.getElementById('stats').innerHTML = '🤖 Checking all voices... please wait';
-
   const { data, error } = await sb.from('voices').select('*').limit(200);
-  if (error) {
-    alert(error.message);
-    return;
-  }
-
+  if (error) { alert(error.message); return; }
   let fixed = 0;
   for (const v of data) {
     const res = inspectVoice(v);
@@ -280,82 +271,96 @@ async function autoInspectAll() {
       quality_score: res.sc,
       status: res.st,
       inspector_note: res.note,
-      ai_verdict: res.st + ' - ' + res.note
+      ai_verdict: res.st + ' - ' + res.note,
+      approved_duration_seconds: res.approved
     }).eq('id', v.id);
-
     if (!upErr) fixed++;
   }
-
-  alert(`✅ Done! ${fixed} voices checked and updated.\nBest ones are now on top.`);
+  alert(`✅ Done! ${fixed} voices checked.\n- GOOD voices now have approved minutes that show for user balance.`);
   load();
 }
 
-async function markGood(id) {
+async function markGood(id, secs) {
+  if (!confirm(`Approve ${secs} secs for this voice as GOOD?`)) return;
   await sb.from('voices').update({
     status: 'GOOD',
     quality_score: 90,
-    inspector_note: '✅ GOOD: Approved by Chairman',
-    ai_verdict: 'GOOD 🟢'
+    approved_duration_seconds: secs,
+    inspector_note: '✅ GOOD: Approved by Chairman - '+secs+' secs approved',
+    ai_verdict: 'GOOD 🟢 Approved '+secs+'s'
   }).eq('id', id);
+  load();
+}
+
+async function adjustVoice(id) {
+  const input = document.getElementById('adj-'+id);
+  const secs = parseInt(input.value);
+  if (isNaN(secs) || secs < 0) { alert('Enter valid approved seconds'); return; }
+  if (!confirm(`Adjust and Approve as GOOD with ${secs} secs approved?\n\n(If user recorded 120s but you want to approve only ${secs}s)`)) return;
+  await sb.from('voices').update({
+    status: 'GOOD',
+    quality_score: secs >= 120? 85 : 60,
+    approved_duration_seconds: secs,
+    inspector_note: '✅ Adjusted by Chairman to '+secs+' secs approved (original was different)',
+    ai_verdict: 'GOOD Adjusted '+secs+'s'
+  }).eq('id', id);
+  alert(`Adjusted to ${secs} secs and approved!`);
   load();
 }
 
 async function markBroken(id) {
+  if (!confirm('Reject this voice? Approved will be 0')) return;
   await sb.from('voices').update({
     status: 'BROKEN',
     quality_score: 0,
-    inspector_note: '🔴 BROKEN: Marked by Chairman',
-    ai_verdict: 'BROKEN'
+    approved_duration_seconds: 0,
+    inspector_note: '🔴 BROKEN: Rejected by Chairman',
+    ai_verdict: 'BROKEN Rejected'
   }).eq('id', id);
   load();
 }
 
-async function delV(id) {
-  if (!confirm('Delete this voice permanently?')) return;
+async function delV(id, audio_url) {
+  if (!confirm('Delete this voice permanently? This will delete from database and storage')) return;
+  try{
+    const parts = audio_url.split('/voices/');
+    if(parts[1]){
+      const fileName = parts[1].split('?')[0];
+      await sb.storage.from('voices').remove([fileName]);
+    }
+  }catch(e){ console.log('Storage delete failed', e); }
   await sb.from('voices').delete().eq('id', id);
   load();
 }
 
 async function loadAnn() {
-  const { data } = await sb.from('announcements')
-    .select('*')
-    .order('created_at', { ascending: false });
-
+  const { data } = await sb.from('announcements').select('*').order('created_at', { ascending: false });
   document.getElementById('aList').innerHTML = (data || []).map(a => `
     <div style="background:rgba(0,0,0,0.25); padding:10px; border-radius:8px; margin:6px 0; display:flex; justify-content:space-between; align-items:flex-start;">
-      <div>
-        <b>${a.title}</b><br>
-        <small>${a.message}</small>
-      </div>
+      <div><b>${a.title}</b><br><small>${a.message}</small></div>
       <button onclick="delA('${a.id}')" style="background:#ff4757; color:#fff; border:none; padding:4px 8px; border-radius:6px;">X</button>
     </div>
   `).join('') || '<p style="opacity:0.6">No announcements yet</p>';
 }
-
 async function postA() {
   const t = document.getElementById('aT').value.trim();
   const m = document.getElementById('aM').value.trim();
-  if (!t || !m) return alert('Please fill title and message');
-
+  if (!t ||!m) return alert('Please fill title and message');
   await sb.from('announcements').insert([{ title: t, message: m }]);
   alert('✅ Announcement posted!');
-  document.getElementById('aT').value = '';
-  document.getElementById('aM').value = '';
+  document.getElementById('aT').value = ''; document.getElementById('aM').value = '';
   loadAnn();
 }
-
-async function delA(id) {
-  if (!confirm('Delete this announcement?')) return;
-  await sb.from('announcements').delete().eq('id', id);
-  loadAnn();
-}
+async function delA(id) { if (!confirm('Delete this announcement?')) return; await sb.from('announcements').delete().eq('id', id); loadAnn(); }
 
 function filterA(type) {
   document.querySelectorAll('.vItem').forEach(el => {
+    const status = el.dataset.status;
     const sc = parseInt(el.dataset.sc) || 0;
     if (type === 'all') el.style.display = 'block';
-    else if (type === 'good') el.style.display = sc >= 60 ? 'block' : 'none';
-    else el.style.display = sc < 60 ? 'block' : 'none';
+    else if (type === 'unchecked') el.style.display = status === 'UNCHECKED'? 'block' : 'none';
+    else if (type === 'good') el.style.display = status === 'GOOD'? 'block' : 'none';
+    else el.style.display = status === 'BROKEN'? 'block' : 'none';
   });
 }
 </script>
