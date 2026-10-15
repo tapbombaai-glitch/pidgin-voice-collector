@@ -19,33 +19,31 @@ textarea{min-height:80px;resize:none}
 .progress-container{background:rgba(0,0,0,0.4);border-radius:20px;height:18px;margin:12px 0;overflow:hidden}
 .progress-bar{height:100%;background:linear-gradient(90deg,#ff4757,#ffa502,#2ed573);width:0%;transition:width 0.3s ease;border-radius:20px}
 .hours-card{background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:16px;text-align:center;border:2px solid #f1c40f;margin-bottom:16px}
-.voice-item{background:rgba(0,0,0,0.35);border-radius:12px;padding:12px;margin-bottom:10px;border-left:5px solid #555}
-.small{font-size:12px;opacity:0.75;margin-top:6px}
-.section-title{font-size:15px;font-weight:700;margin-bottom:10px;color:#f1c40f}
-@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
 <h1>🎙️ Ademi Pidgin Voice</h1>
 <p class="subtitle">Talk minimum 2 minutes • Real Pidgin only • ₦500 per 90 mins</p>
-<div id="announceBox" style="display:none;background:linear-gradient(135deg,#f1c40f,#ff9a00);border:2px solid #fff;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;font-weight:900;color:#000;animation:pulse 2s infinite"></div>
-<div class="hours-card"><h3 style="margin-bottom:8px;">💰 My Balance</h3><div id="myHoursText">Loading...</div></div>
+<div id="announceBox" style="display:none;background:linear-gradient(135deg,#f1c40f,#ff9a00);border:2px solid #fff;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;font-weight:900;color:#000"></div>
+
+<div class="hours-card"><h3 style="margin-bottom:8px;">💰 My Balance - Counting</h3><div id="myHoursText">Loading...</div></div>
+
 <div class="card">
-<div class="section-title">🏦 Your Bank Details (Compulsory)</div>
-<input id="accountName" placeholder="Account Name" maxlength="60">
-<input id="accountNumber" placeholder="Account Number" maxlength="15" inputmode="numeric">
-<input id="bankName" placeholder="Bank Name" maxlength="40">
+<div style="font-size:15px;font-weight:700;margin-bottom:10px;color:#f1c40f">🏦 Your Bank Details (Compulsory)</div>
+<input id="accountName" placeholder="Account Name">
+<input id="accountNumber" placeholder="Account Number" inputmode="numeric">
+<input id="bankName" placeholder="Bank Name">
 </div>
+
 <div class="card">
-<input id="userName" placeholder="Your name" maxlength="40">
+<input id="userName" placeholder="Your name">
 <select id="vLoc"><option>Port Harcourt</option><option>Lagos</option><option>Abuja</option><option>Warri</option><option>Other</option></select>
 <textarea id="vTranscript" placeholder="Your Pidgin will appear here while you talk..." readonly></textarea>
 <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
-<div style="text-align:center;font-size:14px;margin-bottom:8px" id="progressText">0 / 120 seconds</div>
-<div class="status-box" id="recStatus">✅ Ready<br><span class="small">Talk 2 minutes, you qualify to save</span></div>
+<div style="text-align:center;font-size:14px;margin-bottom:8px;font-weight:800" id="progressText">0 / 120 seconds = ₦0.00</div>
+<div class="status-box" id="recStatus">✅ Ready</div>
 <button class="btn btn-red" id="recBtn" onclick="toggleRec()">🔴 START RECORDING</button>
 </div>
-<div class="card"><h3 style="margin-bottom:12px;">📊 My Records</h3><div id="myVoices">Loading...</div></div>
 
 <script>
 const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
@@ -58,67 +56,37 @@ document.getElementById('accountName').value=localStorage.getItem('pidgin_accoun
 document.getElementById('accountNumber').value=localStorage.getItem('pidgin_account_number')||'';
 document.getElementById('bankName').value=localStorage.getItem('pidgin_bank_name')||'';
 function setupSpeech(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;const rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-NG';rec.onresult=(e)=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){finalTranscript+=e.results[i][0].transcript+' ';}else{t+=e.results[i][0].transcript;}}document.getElementById('vTranscript').value=finalTranscript+t;};return rec;}
-function updateProgress(){const p=Math.min((speakingTime/MIN_SECONDS)*100,100);document.getElementById('progressBar').style.width=p+'%';document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} secs`;}
-async function showAnnouncement(){try{const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);if(data&&data[0]&&data[0].message){const b=document.getElementById('announceBox');b.style.display='block';b.innerHTML='📢 CHAIRMAN: <span style="font-size:15px;">'+data[0].message+'</span>';}}catch(e){}}
+function updateProgress(){const p=Math.min((speakingTime/MIN_SECONDS)*100,100);document.getElementById('progressBar').style.width=p+'%';document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} secs = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}`;}
+async function showAnnouncement(){try{const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);if(data&&data[0]&&data[0].message){const b=document.getElementById('announceBox');b.style.display='block';b.innerHTML='📢 CHAIRMAN: '+data[0].message;}}catch(e){}}
 async function toggleRec(){
-if(isRecording){isRecording=false;document.getElementById('recBtn').innerText='⏳ Saving...';document.getElementById('recBtn').disabled=true;if(mediaRec&&mediaRec.state!=='inactive'){mediaRec.onstop=async()=>{if(chunks.length>0){audioBlob=new Blob(chunks,{type:'audio/webm'});await processRecording();}else{alert("No audio");resetUI();}};mediaRec.stop();}if(recognition)try{recognition.stop();}catch(e){}if(audioContext)try{audioContext.close();}catch(e){}return;}
+if(isRecording){isRecording=false;document.getElementById('recBtn').innerText='⏳ Saving...';document.getElementById('recBtn').disabled=true;if(mediaRec&&mediaRec.state!=='inactive'){mediaRec.onstop=async()=>{if(chunks.length>0){audioBlob=new Blob(chunks,{type:'audio/webm'});await processRecording();}else{resetUI();}};mediaRec.stop();}if(recognition)try{recognition.stop();}catch(e){}if(audioContext)try{audioContext.close();}catch(e){}return;}
 const name=document.getElementById('userName').value.trim(),aN=document.getElementById('accountName').value.trim(),aNum=document.getElementById('accountNumber').value.trim(),bank=document.getElementById('bankName').value.trim();
-if(!name){alert('Enter name');return;}if(!aN||!aNum||!bank){alert('Fill bank details');return;}
+if(!name||!aN||!aNum||!bank){alert('Fill all bank details + name');return;}
 localStorage.setItem('pidgin_user_name',name);localStorage.setItem('pidgin_account_name',aN);localStorage.setItem('pidgin_account_number',aNum);localStorage.setItem('pidgin_bank_name',bank);
 finalTranscript='';document.getElementById('vTranscript').value='';speakingTime=0;chunks=[];audioBlob=null;updateProgress();
-try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioContext=new(window.AudioContext||window.webkitAudioContext)();const source=audioContext.createMediaStreamSource(stream);analyser=audioContext.createAnalyser();analyser.fftSize=512;source.connect(analyser);const d=new Uint8Array(analyser.frequencyBinCount);lastCheck=Date.now();function checkVoice(){if(!isRecording)return;analyser.getByteFrequencyData(d);let sum=0;for(let i=0;i<d.length;i++)sum+=d[i];const avg=sum/d.length,talking=avg>8,now=Date.now(),delta=(now-lastCheck)/1000;if(talking)speakingTime+=delta;else speakingTime+=delta*0.3;lastCheck=now;updateProgress();if(speakingTime>=MIN_SECONDS){document.getElementById('recStatus').innerHTML=`✅ You don reach 2 mins! You fit stop now`;}else{document.getElementById('recStatus').innerHTML=`🔴 Talking... ${Math.floor(speakingTime)}s - ${Math.ceil(Math.max(0,MIN_SECONDS-speakingTime))}s left`;}requestAnimationFrame(checkVoice);}mediaRec=new MediaRecorder(stream);mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};mediaRec.start(200);recognition=setupSpeech();if(recognition)try{recognition.start();}catch(e){}isRecording=true;checkVoice();document.getElementById('recBtn').innerText='⏹️ STOP RECORDING';document.getElementById('recBtn').className='btn btn-orange';}catch(err){alert('Allow mic: '+err.message);resetUI();}
-}
+try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioContext=new(window.AudioContext||window.webkitAudioContext)();const source=audioContext.createMediaStreamSource(stream);analyser=audioContext.createAnalyser();analyser.fftSize=512;source.connect(analyser);const d=new Uint8Array(analyser.frequencyBinCount);lastCheck=Date.now();function checkVoice(){if(!isRecording)return;analyser.getByteFrequencyData(d);let sum=0;for(let i=0;i<d.length;i++)sum+=d[i];const avg=sum/d.length,talking=avg>8,now=Date.now(),delta=(now-lastCheck)/1000;if(talking)speakingTime+=delta;else speakingTime+=delta*0.3;lastCheck=now;updateProgress();document.getElementById('recStatus').innerHTML= speakingTime>=MIN_SECONDS? `✅ You don reach 2 mins! = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}<br>You fit STOP` : `🔴 Talking... ${Math.floor(speakingTime)}s = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}`;requestAnimationFrame(checkVoice);}mediaRec=new MediaRecorder(stream);mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};mediaRec.start(200);recognition=setupSpeech();if(recognition)recognition.start();isRecording=true;checkVoice();document.getElementById('recBtn').innerText='⏹️ STOP';document.getElementById('recBtn').className='btn btn-orange';}catch(err){alert(err.message);resetUI();}}
 async function processRecording(){
-const name=document.getElementById('userName').value.trim()||'Anon',tr=document.getElementById('vTranscript').value.trim(),loc=document.getElementById('vLoc').value,aN=document.getElementById('accountName').value.trim(),aNum=document.getElementById('accountNumber').value.trim(),bank=document.getElementById('bankName').value.trim(),saved=Math.round(speakingTime);
-if(!audioBlob&&chunks.length>0)audioBlob=new Blob(chunks,{type:'audio/webm'});if(!audioBlob||audioBlob.size<500){document.getElementById('recStatus').innerHTML=`❌ No audio`;resetUI();return;}if(speakingTime<MIN_SECONDS){document.getElementById('recStatus').innerHTML=`❌ Only ${saved}s`;resetUI();return;}
-document.getElementById('recStatus').innerHTML=`✅ Your ${saved}s don save!<br><div style="background:rgba(241,196,15,0.25);border:1px solid #f1c40f;padding:10px;border-radius:10px;margin-top:10px;font-size:13px;font-weight:800;color:#f1c40f;text-align:center">⏳ Waiting for Chairman approval</div>`;
-try{const fn=`${Date.now()}_${name.replace(/\s+/g,'_')}.webm`;const {error:upErr}=await sb.storage.from('voices').upload(fn,audioBlob,{contentType:'audio/webm'});if(upErr)throw upErr;const {data:urlData}=sb.storage.from('voices').getPublicUrl(fn);await sb.from('voices').insert([{name:name,user_name:name,title:`${name} - ${(speakingTime/60).toFixed(1)}m`,transcript:tr||'(Audio)',location:loc,duration_seconds:saved,approved_duration_seconds:0,audio_url:urlData.publicUrl,quality_score:0,status:'UNCHECKED',inspector_note:'Waiting',account_name:aN,account_number:aNum,bank_name:bank}]).select();setTimeout(async()=>{await loadMyVoices();await loadMyHours();},600);}catch(err){alert('Save failed: '+err.message);}resetUI();await loadMyVoices();await loadMyHours();
-}
+const name=document.getElementById('userName').value.trim(),tr=document.getElementById('vTranscript').value.trim(),loc=document.getElementById('vLoc').value,aN=document.getElementById('accountName').value.trim(),aNum=document.getElementById('accountNumber').value.trim(),bank=document.getElementById('bankName').value.trim(),saved=Math.round(speakingTime);
+if(!audioBlob&&chunks.length>0)audioBlob=new Blob(chunks,{type:'audio/webm'});if(!audioBlob||saved<MIN_SECONDS){document.getElementById('recStatus').innerText='Only '+saved+'s';resetUI();return;}
+document.getElementById('recStatus').innerHTML=`✅ Your ${saved}s = ₦${(saved*RATE_PER_SECOND).toFixed(2)} don save! Waiting Chairman`;
+try{const fn=Date.now()+'_'+name.replace(/\s+/g,'_')+'.webm';const{error:upErr}=await sb.storage.from('voices').upload(fn,audioBlob,{contentType:'audio/webm'});if(upErr)throw upErr;const{data:urlData}=sb.storage.from('voices').getPublicUrl(fn);await sb.from('voices').insert([{name:name,user_name:name,title:name+' - '+(speakingTime/60).toFixed(1)+'m',transcript:tr||'(Audio)',location:loc,duration_seconds:saved,approved_duration_seconds:0,audio_url:urlData.publicUrl,status:'UNCHECKED',account_name:aN,account_number:aNum,bank_name:bank}]);}catch(err){alert('Save failed '+err.message);}resetUI();loadMyHours();}
 function resetUI(){isRecording=false;document.getElementById('recBtn').innerText='🔴 START RECORDING';document.getElementById('recBtn').className='btn btn-red';document.getElementById('recBtn').disabled=false;speakingTime=0;updateProgress();}
-
-// NO AUDIO PLAYER + MONEY ONLY AFTER APPROVAL + NO BOTTOM WRITING
-async function loadMyVoices(){
-const myName=localStorage.getItem('pidgin_user_name')||'';if(!myName){document.getElementById('myVoices').innerHTML='<p class="small">Enter name first</p>';return;}
-let {data}=await sb.from('voices').select('*').ilike('name',myName).order('created_at',{ascending:false}).limit(30);
-if(!data||data.length===0){const r2=await sb.from('voices').select('*').ilike('user_name',myName).order('created_at',{ascending:false}).limit(30);data=r2.data;}
-if(!data||data.length===0){document.getElementById('myVoices').innerHTML='<p class="small">No recordings</p>';return;}
-let totalRec=0,approved=0,waiting=0,rejected=0;
-data.forEach(v=>{const o=parseFloat(v.duration_seconds||0);totalRec+=o;if(v.status==='QUALIFIED')approved+=parseFloat(v.approved_duration_seconds||0);else if(v.status==='UNCHECKED')waiting+=o;else if(v.status==='REJECTED')rejected+=o;});
-let html=`<div style="background:rgba(0,0,0,0.35);border-radius:12px;padding:12px;margin-bottom:12px">
-<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Total Recorded:</span><b>${Math.floor(totalRec)}s</b></div>
-<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#f1c40f"><span>⏳ Waiting:</span><b>${Math.floor(waiting)}s - ₦0</b></div>
-<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#2ed573"><span>✅ Approved:</span><b>${Math.floor(approved)}s = ₦${(approved*RATE_PER_SECOND).toFixed(2)}</b></div>
-<div style="display:flex;justify-content:space-between;font-size:13px;color:#ff4757"><span>❌ Rejected:</span><b>${Math.floor(rejected)}s</b></div>
-</div>`;
-html+=data.map(v=>{
-const orig=Math.round(parseFloat(v.duration_seconds||0));
-const appr=Math.round(parseFloat(v.approved_duration_seconds||0));
-if(v.status==='QUALIFIED'){
-const money=appr*RATE_PER_SECOND;
-return `<div class="voice-item" style="border-left-color:#2ed573"><div style="display:flex;justify-content:space-between"><strong>✅ APPROVED</strong><span style="color:#2ed573;font-weight:900">₦${money.toFixed(2)}</span></div><div style="font-size:13px;margin-top:6px">Score: <b>${appr}s approved</b> from ${orig}s</div><div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(v.created_at).toLocaleString()}</div></div>`;
-}else if(v.status==='UNCHECKED'){
-return `<div class="voice-item" style="border-left-color:#f1c40f"><div style="display:flex;justify-content:space-between"><strong>⏳ WAITING</strong><span style="color:#f1c40f;font-weight:900">₦0.00</span></div><div style="font-size:13px;margin-top:6px">Recorded: <b>${orig}s</b> - Waiting Chairman</div><div style="font-size:11px;opacity:0.6;margin-top:4px">${new Date(v.created_at).toLocaleString()}</div></div>`;
-}else{
-return `<div class="voice-item" style="border-left-color:#ff4757"><div><strong>❌ REJECTED</strong> - ${orig}s</div><div style="font-size:11px;opacity:0.6">${new Date(v.created_at).toLocaleString()}</div></div>`;
-}
-}).join('');
-document.getElementById('myVoices').innerHTML=html;
-}
 async function loadMyHours(){
-const myName=localStorage.getItem('pidgin_user_name')||'';if(!myName){document.getElementById('myHoursText').innerHTML='Enter name';return;}
+const myName=localStorage.getItem('pidgin_user_name')||'';if(!myName){document.getElementById('myHoursText').innerHTML='Enter name to see balance';return;}
 let {data}=await sb.from('voices').select('*').ilike('name',myName).limit(300);
 if(!data||data.length===0){const r2=await sb.from('voices').select('*').ilike('user_name',myName).limit(300);data=r2.data;}
-let approvedSecs=0,waitingSecs=0;
-if(data){data.forEach(v=>{if(v.status==='QUALIFIED')approvedSecs+=parseFloat(v.approved_duration_seconds||0);else if(v.status==='UNCHECKED')waitingSecs+=parseFloat(v.duration_seconds||0);});}
-const realMoney=approvedSecs*RATE_PER_SECOND,percent=Math.min(100,(approvedSecs/TARGET_SECONDS)*100);
+let approvedSecs=0,waitingSecs=0,totalSecs=0,rejectedSecs=0;
+if(data){data.forEach(v=>{const o=parseFloat(v.duration_seconds||0);totalSecs+=o;if(v.status==='QUALIFIED')approvedSecs+=parseFloat(v.approved_duration_seconds||0);else if(v.status==='UNCHECKED')waitingSecs+=o;else if(v.status==='REJECTED')rejectedSecs+=o;});}
+const realMoney=approvedSecs*RATE_PER_SECOND,waitingMoney=0;
 document.getElementById('myHoursText').innerHTML=`
-<div style="font-size:11px;opacity:0.7">WAITING: ${Math.floor(waitingSecs)}s (₦0)</div>
-<div style="font-size:26px;font-weight:900;color:#2ed573;margin:6px 0">₦${realMoney.toFixed(2)}</div>
-<div style="font-size:11px">APPROVED: ${Math.floor(approvedSecs)}s / ${TARGET_SECONDS}s</div>
-<div style="background:rgba(0,0,0,0.3);border-radius:10px;height:12px;margin:10px 0"><div style="background:linear-gradient(90deg,#2ed573,#f1c40f);height:100%;width:${percent}%;border-radius:10px"></div></div>
+<div style="font-size:13px;margin-bottom:6px">Total: <b>${Math.floor(totalSecs)}s = ₦${(totalSecs*RATE_PER_SECOND).toFixed(2)}</b></div>
+<div style="font-size:13px;margin-bottom:6px;color:#f1c40f">⏳ Waiting: <b>${Math.floor(waitingSecs)}s = ₦0.00 (pending)</b></div>
+<div style="font-size:28px;font-weight:900;color:#2ed573;margin:8px 0">₦${realMoney.toFixed(2)}</div>
+<div style="font-size:12px">✅ Approved: ${Math.floor(approvedSecs)}s / ${TARGET_SECONDS}s | ❌ Rejected: ${Math.floor(rejectedSecs)}s</div>
+<div style="background:rgba(0,0,0,0.3);border-radius:10px;height:12px;margin:10px 0"><div style="background:linear-gradient(90deg,#2ed573,#f1c40f);height:100%;width:${Math.min(100,(approvedSecs/TARGET_SECONDS)*100)}%;border-radius:10px"></div></div>
 `;
 }
-loadMyVoices();loadMyHours();showAnnouncement();setInterval(showAnnouncement,10000);
+loadMyHours();showAnnouncement();
 </script>
 </body>
 </html>
