@@ -40,6 +40,9 @@ export default function LiveRoom({ params }: { params: { roomId: string } }) {
           if (pc.current?.connectionState === 'connected') {
             setStatus('🔴 LIVE — Una dey talk!')
           }
+          if (pc.current?.connectionState === 'disconnected') {
+            setStatus('Person comot — waiting...')
+          }
         }
 
         const channel = supabase.channel(`live:${roomId}`, {
@@ -68,7 +71,7 @@ export default function LiveRoom({ params }: { params: { roomId: string } }) {
                 const offer = await pc.current.createOffer()
                 await pc.current.setLocalDescription(offer)
                 channel.send({ type: 'broadcast', event: 'signal', payload: offer })
-                setStatus('Waiting for other person...')
+                setStatus('Waiting for other person... Share link!')
               }
             }, 1000)
           }
@@ -101,14 +104,15 @@ export default function LiveRoom({ params }: { params: { roomId: string } }) {
   const toggleMute = () => {
     if (localAudio.current?.srcObject) {
       const stream = localAudio.current.srcObject as MediaStream
-      stream.getAudioTracks().forEach(t => t.enabled = isMuted)
-      setIsMuted(!isMuted)
+      const newMuted =!isMuted
+      stream.getAudioTracks().forEach(t => t.enabled =!newMuted)
+      setIsMuted(newMuted)
     }
   }
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold mb-2">Pidgin Live Call</h1>
+      <h1 className="text-2xl font-bold mb-2">🔥 Pidgin Live Call</h1>
       <p className="text-yellow-400 mb-6">Room: {roomId}</p>
       <div className="bg-zinc-900 p-6 rounded-2xl w-full max-w-md text-center border border-zinc-800">
         <p className="mb-4 text-lg">{status}</p>
@@ -119,11 +123,11 @@ export default function LiveRoom({ params }: { params: { roomId: string } }) {
             {isMuted? '🔇 Unmute' : '🎙️ Mute'}
           </button>
           <button onClick={copyLink} className="bg-white text-black px-5 py-3 rounded-full font-bold">
-            {copied? 'Copied!' : '📋 Copy Link'}
+            {copied? '✅ Copied!' : '📋 Copy Link'}
           </button>
         </div>
         <p className="text-zinc-500 text-sm mt-6">Share link make your guy join. Una go hear each other live.</p>
-        <a href="/" className="block mt-6 text-zinc-400 underline text-sm">Leave Call</a>
+        <a href="/" className="block mt-6 text-zinc-400 underline text-sm">← Back to Voice Collector</a>
       </div>
     </div>
   )
