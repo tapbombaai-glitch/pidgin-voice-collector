@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLECTOR - PACKAGER PRO MAX</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+body{font-family:sans-serif;background:#0a0a0a;color:#fff;padding:15px}
+.card{background:#1a1a1a;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #333}
+button{width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;margin-top:8px;cursor:pointer}
+.yellow{background:#FFC107;color:#000}
+.green{background:#00ff88;color:#000}
+.blue{background:#0088ff;color:#fff}
+input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#000;color:#fff;margin-top:5px}
+label{font-size:12px;color:#aaa;margin-top:10px;display:block}
+</style>
+</head>
+<body>
+
+<h2>🎧 LLECTOR PACKAGER - Sell for $150/hr</h2>
+
+<div class="card">
+<label>Supabase URL</label>
+<input id="sbUrl" value="https://rupuxvpupdhlhxgjrbsh.supabase.co">
+<label>Supabase Anon Key</label>
+<input id="sbKey" value="YOUR_ANON_KEY_HERE">
+<label>Worker Name to Package (e.g. Adiam)</label>
+<input id="workerName" value="Adiam">
+<button class="blue" onclick="loadVoices()">1. LOAD VOICES FROM SUPABASE</button>
+</div>
+
+<div id="voicesList"></div>
+
+<div class="card">
+<h3>Step 2,3,4: Package Selected</h3>
+<label>Split long audio into (seconds)</label>
+<select id="splitSec"><option value="12">12 sec clips (Best for AI)</option><option value="10">10 sec</option><option value="15">15 sec</option></select>
+<button class="yellow" onclick="packageAll()">2. CLEAN + SEGMENT + CREATE CSV + METADATA</button>
+<button class="green" onclick="downloadZip()">3. DOWNLOAD FINAL DATASET ZIP ($150/hr READY)</button>
+<div id="status" style="margin-top:10px;color:#00ff88"></div>
+</div>
+
+<script>
+let VOICES = [];
+let PACKAGED = []; // {fileName, blob, text}
+let META = [];
+
+async function loadVoices(){
+ const url = document.getElementById('sbUrl').value;
+ const key = document.getElementById('sbKey').value;
+ const worker = document.getElementById('workerName').value;
+ document.getElementById('status').innerText = "Loading...";
+ const res = await fetch(`${url}/rest/v1/voices?select=*&worker_name=ilike.%${worker}%`, {
+   headers:{apikey:key, Authorization:`Bearer ${key}`}
+ });
+ VOICES = await res.json();
+ let html = "";
+ VOICES.forEach((v,i)=>{
+   html+=`<div class="card">
+   <input type="checkbox" checked id="chk_${i}"> <b>${v.worker_name} - ${v.duration}s</b><br>
+   <audio controls src="${v.audio_url}" style="width:100%"></audio>
+   <label>Transcript for this file (correct Pidgin exactly)</label>
+   <textarea id="txt_${i}" placeholder="Type exactly wetin dem talk for this file...">How you dey, I dey come Port Harcourt tomorrow</textarea>
+   <label>Age</label><input id="age_${i}" value="22">
+   <label>Gender</label><select id="gen_${i}"><option>female</option><option>male</option></select>
+   </div>`;
+ });
+ document.getElementById('voicesList').innerHTML = html;
+ document.getElementById('status').innerText = `Loaded ${VOICES.length} files`;
+}
+
+// Convert and Split using Web Audio API to WAV 16kHz Mono
+async function packageAll(){
+ PACKAGED=[]; META=[];
+ document.getElementById('status').innerText = "Packaging... this fit take 1-2 mins, no close browser!";
+ const split = parseInt(document.getElementById('splitSec').value);
+ for(let i=0;i<VOICES.length;i++){
+   if(!document.getElementById(`chk_${i}`).checked) continue;
+   const v = VOICES[i];
+   const fullText = document.getElementById(`txt_${i}`).value;
+   const audioBlob = await fetch(v.audio_url).then(r=>r.blob());
+   const audioCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
+   const arrayBuffer = await audioBlob.arrayBuffer();
+   const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+   // resample to 16kHz mono already via context
+   const duration = decoded.duration;
+   const numChunks = Math.ceil(duration / split);
+   for(let c=0;c<numChunks;c++){
+     const start = c*split;
+     const end = Math.min((c+1)*split, duration);
+     const chunkDuration = end-start;
+     // Create buffer for chunk
+     const chunkBuffer = audioCtx.createBuffer(1, chunkDuration*16000, 16000);
+     chunkBuffer.getChannelData(0).set(decoded.getChannelData(0).slice(start*16000, end*16000));
+     const wavBlob = bufferToWav(chunkBuffer);
+     const fileName = `${v.worker_name}_${String(i).padStart(3,'0')}_${String(c).padStart(3,'0')}.wav`;
+     PACKAGED.push({fileName, blob:wavBlob, text: fullText.split('.')[c] || fullText});
+     META.push({file_name:fileName, speaker_id:`${v.worker_name}_PH_01`, duration: chunkDuration.toFixed(2), text: fullText.split('.')[c] || fullText, age: document.getElementById(`age_${i}`).value, gender: document.getElementById(`gen_${i}`).value, language:"Nigerian Pidgin", accent:"Port Harcourt", environment:"quiet indoor", sample_rate:16000});
+   }
+ }
+ document.getElementById('status').innerText = `Packaged! ${PACKAGED.length} WAV files ready. Now click DOWNLOAD ZIP`;
+}
+
+function bufferToWav(buffer){
+ const numChannels=1; const sampleRate=16000; const format=1;
+ const bitDepth=16;
+ let result; const dataLength = buffer.length * 2;
+ const headerLength=44;
+ const arrayBuffer = new ArrayBuffer(headerLength+dataLength);
+ const view = new DataView(arrayBuffer);
+ // RIFF
+ writeString(view,0,'RIFF'); view.setUint32(4,36+dataLength,true); writeString(view,8,'WAVE');
+ writeString(view,12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,format,true); view.setUint16(22,numChannels,true);
+ view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*numChannels*2,true); view.setUint16(32,numChannels*2,true); view.setUint16(34,bitDepth,true);
+ writeString(view,36,'data'); view.setUint32(40,dataLength,true);
+ const channelData = buffer.getChannelData(0);
+ let offset=44;
+ for(let i=0;i<channelData.length;i++,offset+=2){
+   const s = Math.max(-1,Math.min(1,channelData[i]));
+   view.setInt16(offset,s<0?s*0x8000:s*0x7FFF,true);
+ }
+ return new Blob([view],{type:'audio/wav'});
+}
+function writeString(view,offset,string){for(let i=0;i<string.length;i++) view.setUint8(offset+i,string.charCodeAt(i))}
+
+async function downloadZip(){
+ const zip = new JSZip();
+ const audios = zip.folder("audios");
+ PACKAGED.forEach(p=>audios.file(p.fileName,p.blob));
+ // transcripts.csv
+ let csv = "audio_file,text\n";
+ PACKAGED.forEach(p=>{csv+=`${p.fileName},"${p.text.replace(/"/g,'""')}"\n`});
+ zip.file("transcripts.csv",csv);
+ zip.file("metadata.json",JSON.stringify(META,null,2));
+ zip.file("README.md",`# Nigerian Pidgin Dataset - Packaged by LLECTOR\nHours: ${(PACKAGED.reduce((a,b)=>a+0,0) || META.length*12/3600).toFixed(2)}\nLanguage: Nigerian Pidgin (Port Harcourt)\nFormat: WAV 16kHz Mono\nTotal Files: ${PACKAGED.length}\nThis dataset is ready to sell for $80-$200/hour\n`);
+ const blob = await zip.generateAsync({type:"blob"});
+ saveAs(blob, `LLECTOR_Pidgin_Dataset_${new Date().toISOString().slice(0,10)}.zip`);
+ document.getElementById('status').innerText = "ZIP DOWNLOADED! You don get $150/hr dataset!";
+}
+</script>
+</body>
+</html>
