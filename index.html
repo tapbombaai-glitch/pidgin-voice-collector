@@ -1,89 +1,769 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Ademi Pidgin Voice</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f0c29;color:#fff;padding:16px;max-width:480px;margin:0 auto;min-height:100vh}
-h1{text-align:center;font-size:22px;margin:10px 0 4px}
-.subtitle{text-align:center;font-size:13px;opacity:0.7;margin-bottom:18px}
-.card{background:rgba(255,255,255,0.08);border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.12)}
-input,select,textarea{width:100%;padding:14px;border-radius:12px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #555;font-size:16px;margin-bottom:12px}
-textarea{min-height:80px;resize:none}
-.btn{width:100%;padding:16px;border-radius:14px;border:none;font-size:17px;font-weight:800;cursor:pointer;margin-top:8px}
-.btn-red{background:#ff4757;color:white}.btn-orange{background:#ffa502;color:#000}
-.status-box{background:rgba(0,0,0,0.35);border-radius:12px;padding:14px;text-align:center;font-size:15px;font-weight:600;margin:12px 0;line-height:1.4}
-.progress-container{background:rgba(0,0,0,0.4);border-radius:20px;height:18px;margin:12px 0;overflow:hidden}
-.progress-bar{height:100%;background:linear-gradient(90deg,#ff4757,#ffa502,#2ed573);width:0%;transition:width 0.3s ease;border-radius:20px}
-.hours-card{background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px;padding:16px;text-align:center;border:2px solid #f1c40f;margin-bottom:16px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ademi Pidgin Voice</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f7f4;
+      color: #17202a;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .header {
+      background: #087f5b;
+      color: white;
+      padding: 25px;
+      border-radius: 18px;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0 0 8px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 14px 0 6px;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ccd6d1;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      border: none;
+      padding: 13px 18px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .start {
+      background: #087f5b;
+      color: white;
+    }
+
+    .stop {
+      background: #e7eee9;
+      color: #123b2e;
+    }
+
+    .submit {
+      width: 100%;
+      background: #087f5b;
+      color: white;
+      margin-top: 15px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    .status {
+      padding: 13px;
+      background: #eef4f1;
+      border-radius: 10px;
+      margin-top: 15px;
+      white-space: pre-wrap;
+    }
+
+    .announcement {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+  </style>
 </head>
+
 <body>
-<h1>🎙️ Ademi Pidgin Voice</h1>
-<p class="subtitle">Talk minimum 2 minutes • Real Pidgin only • ₦500 per 90 mins</p>
-<div id="announceBox" style="display:none;background:linear-gradient(135deg,#f1c40f,#ff9a00);border:2px solid #fff;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;font-weight:900;color:#000"></div>
-<div class="hours-card"><h3>💰 My Balance - Counting</h3><div id="myHoursText">Loading...</div></div>
-<div class="card">
-<div style="font-weight:700;margin-bottom:10px;color:#f1c40f">🏦 Your Bank Details</div>
-<input id="accountName" placeholder="Account Name">
-<input id="accountNumber" placeholder="Account Number" inputmode="numeric">
-<input id="bankName" placeholder="Bank Name">
+
+<div class="container">
+
+  <div class="header">
+    <h1>Ademi Pidgin Voice</h1>
+    <p>
+      Record your Naija Pidgin English voice and submit am.
+      Speak clearly and naturally.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Announcement</h2>
+    <div id="announcement" class="announcement">
+      Loading announcement...
+    </div>
+  </div>
+
+  <div class="card">
+
+    <h2>Your Details</h2>
+
+    <form id="recordForm">
+
+      <label>Your Name</label>
+      <input
+        id="name"
+        type="text"
+        required
+        placeholder="Enter your name"
+      >
+
+      <label>Account Name</label>
+      <input
+        id="accountName"
+        type="text"
+        required
+        placeholder="Bank account name"
+      >
+
+      <label>Account Number</label>
+      <input
+        id="accountNumber"
+        type="text"
+        inputmode="numeric"
+        maxlength="10"
+        required
+        placeholder="10 digit account number"
+      >
+
+      <label>Bank Name</label>
+      <input
+        id="bankName"
+        type="text"
+        required
+        placeholder="Your bank name"
+      >
+
+      <label>Location</label>
+      <input
+        id="location"
+        type="text"
+        placeholder="Your town/state"
+      >
+
+      <label>Recording Title</label>
+      <input
+        id="title"
+        type="text"
+        placeholder="Example: Market conversation"
+      >
+
+      <div class="timer">
+        Recording: <span id="timer">00:00</span>
+      </div>
+
+      <div style="text-align:center">
+
+        <button
+          type="button"
+          class="start"
+          id="startButton"
+        >
+          🎙️ Start Recording
+        </button>
+
+        <button
+          type="button"
+          class="stop"
+          id="stopButton"
+          disabled
+        >
+          ⏹ Stop Recording
+        </button>
+
+      </div>
+
+      <div class="status" id="status">
+        Ready. Tap Start Recording when you are ready.
+      </div>
+
+      <button
+        type="submit"
+        class="submit"
+        id="submitButton"
+        disabled
+      >
+        Submit Recording
+      </button>
+
+    </form>
+
+  </div>
+
 </div>
-<div class="card">
-<input id="userName" placeholder="Your name">
-<select id="vLoc"><option>Port Harcourt</option><option>Lagos</option><option>Abuja</option><option>Warri</option><option>Other</option></select>
-<textarea id="vTranscript" placeholder="Your Pidgin will appear here while you talk..." readonly></textarea>
-<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
-<div style="text-align:center;font-size:14px;font-weight:800" id="progressText">0 / 120 seconds = ₦0.00</div>
-<div class="status-box" id="recStatus">✅ Ready</div>
-<button class="btn btn-red" id="recBtn" onclick="toggleRec()">🔴 START RECORDING</button>
-</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
-const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
-const MIN_SECONDS=120,TARGET_SECONDS=5400,TARGET_PAY=500,RATE_PER_SECOND=TARGET_PAY/TARGET_SECONDS;
-let mediaRec=null,chunks=[],audioBlob=null,recognition=null,finalTranscript='',speakingTime=0,lastCheck=0,audioContext=null,analyser=null,isRecording=false;
-document.getElementById('userName').value=localStorage.getItem('pidgin_user_name')||'';
-document.getElementById('accountName').value=localStorage.getItem('pidgin_account_name')||'';
-document.getElementById('accountNumber').value=localStorage.getItem('pidgin_account_number')||'';
-document.getElementById('bankName').value=localStorage.getItem('pidgin_bank_name')||'';
-function setupSpeech(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;const rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-NG';rec.onresult=(e)=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal){finalTranscript+=e.results[i][0].transcript+' ';}else{t+=e.results[i][0].transcript;}}document.getElementById('vTranscript').value=finalTranscript+t;};return rec;}
-function updateProgress(){const p=Math.min((speakingTime/MIN_SECONDS)*100,100);document.getElementById('progressBar').style.width=p+'%';document.getElementById('progressText').innerText=`${Math.floor(speakingTime)} / ${MIN_SECONDS} secs = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}`;}
-async function showAnnouncement(){try{const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);if(data&&data[0]&&data[0].message){const b=document.getElementById('announceBox');b.style.display='block';b.innerHTML='📢 CHAIRMAN: '+data[0].message;}}catch(e){}}
-async function toggleRec(){
-if(isRecording){isRecording=false;document.getElementById('recBtn').innerText='⏳ Saving...';document.getElementById('recBtn').disabled=true;if(mediaRec&&mediaRec.state!=='inactive'){mediaRec.onstop=async()=>{if(chunks.length>0){audioBlob=new Blob(chunks,{type:'audio/webm'});await processRecording();}else{resetUI();}};mediaRec.stop();}if(recognition)try{recognition.stop();}catch(e){}if(audioContext)try{audioContext.close();}catch(e){}return;}
-const name=document.getElementById('userName').value.trim(),aN=document.getElementById('accountName').value.trim(),aNum=document.getElementById('accountNumber').value.trim(),bank=document.getElementById('bankName').value.trim();
-if(!name||!aN||!aNum||!bank){alert('Fill all details');return;}
-localStorage.setItem('pidgin_user_name',name);localStorage.setItem('pidgin_account_name',aN);localStorage.setItem('pidgin_account_number',aNum);localStorage.setItem('pidgin_bank_name',bank);
-finalTranscript='';document.getElementById('vTranscript').value='';speakingTime=0;chunks=[];audioBlob=null;updateProgress();
-try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioContext=new(window.AudioContext||window.webkitAudioContext)();const source=audioContext.createMediaStreamSource(stream);analyser=audioContext.createAnalyser();analyser.fftSize=512;source.connect(analyser);const d=new Uint8Array(analyser.frequencyBinCount);lastCheck=Date.now();function checkVoice(){if(!isRecording)return;analyser.getByteFrequencyData(d);let sum=0;for(let i=0;i<d.length;i++)sum+=d[i];const avg=sum/d.length,talking=avg>8,now=Date.now(),delta=(now-lastCheck)/1000;if(talking)speakingTime+=delta;else speakingTime+=delta*0.3;lastCheck=now;updateProgress();document.getElementById('recStatus').innerHTML= speakingTime>=MIN_SECONDS? `✅ Reach 2 mins! = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}<br>STOP now` : `🔴 Talking... ${Math.floor(speakingTime)}s = ₦${(speakingTime*RATE_PER_SECOND).toFixed(2)}`;requestAnimationFrame(checkVoice);}mediaRec=new MediaRecorder(stream);mediaRec.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data);};mediaRec.start(200);recognition=setupSpeech();if(recognition)recognition.start();isRecording=true;checkVoice();document.getElementById('recBtn').innerText='⏹️ STOP';document.getElementById('recBtn').className='btn btn-orange';}catch(err){alert(err.message);resetUI();}}
-async function processRecording(){
-const name=document.getElementById('userName').value.trim(),tr=document.getElementById('vTranscript').value.trim(),loc=document.getElementById('vLoc').value,aN=document.getElementById('accountName').value.trim(),aNum=document.getElementById('accountNumber').value.trim(),bank=document.getElementById('bankName').value.trim(),saved=Math.round(speakingTime);
-if(!audioBlob&&chunks.length>0)audioBlob=new Blob(chunks,{type:'audio/webm'});if(!audioBlob||saved<MIN_SECONDS){document.getElementById('recStatus').innerText='Only '+saved+'s';resetUI();return;}
-document.getElementById('recStatus').innerHTML=`✅ Your ${saved}s = ₦${(saved*RATE_PER_SECOND).toFixed(2)} don save!<br>⏳ Waiting Chairman approval`;
-try{const fn=Date.now()+'_'+name.replace(/\s+/g,'_')+'.webm';const{error:upErr}=await sb.storage.from('voices').upload(fn,audioBlob,{contentType:'audio/webm'});if(upErr)throw upErr;const{data:urlData}=sb.storage.from('voices').getPublicUrl(fn);await sb.from('voices').insert([{name:name,user_name:name,title:name+' - '+(speakingTime/60).toFixed(1)+'m',transcript:tr||'(Audio)',location:loc,duration_seconds:saved,approved_duration_seconds:0,audio_url:urlData.publicUrl,status:'UNCHECKED',account_name:aN,account_number:aNum,bank_name:bank}]);}catch(err){alert('Save failed '+err.message);}resetUI();loadMyHours();}
-function resetUI(){isRecording=false;document.getElementById('recBtn').innerText='🔴 START RECORDING';document.getElementById('recBtn').className='btn btn-red';document.getElementById('recBtn').disabled=false;speakingTime=0;updateProgress();}
-async function loadMyHours(){
-const myName=localStorage.getItem('pidgin_user_name')||'';if(!myName){document.getElementById('myHoursText').innerHTML='Enter name';return;}
-let {data}=await sb.from('voices').select('*').ilike('name',myName).limit(300);
-if(!data||data.length===0){const r2=await sb.from('voices').select('*').ilike('user_name',myName).limit(300);data=r2.data;}
-let approvedSecs=0,waitingSecs=0,totalSecs=0;
-if(data){data.forEach(v=>{const o=parseFloat(v.duration_seconds||0);totalSecs+=o;if(v.status==='QUALIFIED')approvedSecs+=parseFloat(v.approved_duration_seconds||0);else if(v.status==='UNCHECKED')waitingSecs+=o;});}
-const realMoney=approvedSecs*RATE_PER_SECOND;
-const waitingMoney=waitingSecs*RATE_PER_SECOND;
-document.getElementById('myHoursText').innerHTML=`
-<div style="font-size:13px;margin-bottom:4px">Total Recorded: <b>${Math.floor(totalSecs)}s</b></div>
-<div style="font-size:13px;margin-bottom:8px;color:#f1c40f">⏳ Pending (Waiting Approval): <b>${Math.floor(waitingSecs)}s = ₦${waitingMoney.toFixed(2)}</b></div>
-<div style="font-size:11px;opacity:0.8">MAIN MONEY (Approved)</div>
-<div style="font-size:32px;font-weight:900;color:#2ed573;margin:4px 0">₦${realMoney.toFixed(2)}</div>
-<div style="font-size:11px">✅ Approved: ${Math.floor(approvedSecs)}s / ${TARGET_SECONDS}s</div>
-`;
+
+const SUPABASE_URL =
+"https://rupuxvpupdhlhxgjrbsh.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hp";
+
+const supabase =
+window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const BUCKET = "voices";
+
+let recorder = null;
+let stream = null;
+let chunks = [];
+let audioBlob = null;
+let recordingStart = 0;
+let timerInterval = null;
+let recordingSeconds = 0;
+
+
+/* ---------------------------
+   ELEMENTS
+---------------------------- */
+
+const startButton =
+document.getElementById("startButton");
+
+const stopButton =
+document.getElementById("stopButton");
+
+const submitButton =
+document.getElementById("submitButton");
+
+const timer =
+document.getElementById("timer");
+
+const status =
+document.getElementById("status");
+
+
+/* ---------------------------
+   TIMER
+---------------------------- */
+
+function formatTime(seconds) {
+
+  seconds = Math.floor(seconds);
+
+  const minutes =
+    Math.floor(seconds / 60);
+
+  const secs =
+    seconds % 60;
+
+  return String(minutes).padStart(2, "0")
+    + ":"
+    + String(secs).padStart(2, "0");
 }
-loadMyHours();showAnnouncement();
+
+
+function startTimer() {
+
+  recordingStart = Date.now();
+
+  timerInterval =
+    setInterval(() => {
+
+      recordingSeconds =
+        (Date.now() - recordingStart) / 1000;
+
+      timer.textContent =
+        formatTime(recordingSeconds);
+
+    }, 250);
+}
+
+
+function stopTimer() {
+
+  clearInterval(timerInterval);
+
+  timerInterval = null;
+}
+
+
+/* ---------------------------
+   ANNOUNCEMENT
+---------------------------- */
+
+async function loadAnnouncement() {
+
+  const box =
+    document.getElementById("announcement");
+
+  const { data, error } =
+    await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      })
+      .limit(1);
+
+  if (error) {
+
+    box.textContent =
+      "No announcement available.";
+
+    return;
+  }
+
+  if (!data || data.length === 0) {
+
+    box.textContent =
+      "No new announcement.";
+
+    return;
+  }
+
+  const announcement = data[0];
+
+  box.textContent =
+    announcement.message ||
+    announcement.content ||
+    announcement.title ||
+    "No announcement.";
+
+}
+
+
+/* ---------------------------
+   START RECORDING
+---------------------------- */
+
+startButton.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      if (!navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia) {
+
+        throw new Error(
+          "Your browser no support microphone recording."
+        );
+
+      }
+
+      stream =
+        await navigator.mediaDevices
+          .getUserMedia({
+            audio: true
+          });
+
+
+      chunks = [];
+
+      audioBlob = null;
+
+
+      let mimeType =
+        "audio/webm";
+
+
+      if (
+        MediaRecorder.isTypeSupported(
+          "audio/webm;codecs=opus"
+        )
+      ) {
+
+        mimeType =
+          "audio/webm;codecs=opus";
+
+      }
+
+
+      recorder =
+        new MediaRecorder(
+          stream,
+          {
+            mimeType: mimeType
+          }
+        );
+
+
+      recorder.ondataavailable =
+        event => {
+
+          if (event.data &&
+              event.data.size > 0) {
+
+            chunks.push(event.data);
+
+          }
+
+        };
+
+
+      recorder.onstop =
+        () => {
+
+          audioBlob =
+            new Blob(
+              chunks,
+              {
+                type:
+                  recorder.mimeType ||
+                  "audio/webm"
+              }
+            );
+
+
+          stopTimer();
+
+
+          recordingSeconds =
+            (Date.now() - recordingStart) / 1000;
+
+
+          timer.textContent =
+            formatTime(recordingSeconds);
+
+
+          if (audioBlob.size > 0) {
+
+            submitButton.disabled =
+              false;
+
+            status.textContent =
+              "Recording ready. Tap Submit Recording.";
+
+          }
+
+
+          if (stream) {
+
+            stream
+              .getTracks()
+              .forEach(track =>
+                track.stop()
+              );
+
+          }
+
+        };
+
+
+      recorder.start(1000);
+
+
+      startButton.disabled = true;
+
+      stopButton.disabled = false;
+
+      submitButton.disabled = true;
+
+
+      startTimer();
+
+
+      status.textContent =
+        "Recording dey go on... Speak clearly.";
+
+    }
+
+    catch (error) {
+
+      status.textContent =
+        "Microphone error: "
+        + error.message;
+
+    }
+
+  }
+);
+
+
+/* ---------------------------
+   STOP RECORDING
+---------------------------- */
+
+stopButton.addEventListener(
+  "click",
+  () => {
+
+    if (
+      recorder &&
+      recorder.state !== "inactive"
+    ) {
+
+      recorder.stop();
+
+    }
+
+    startButton.disabled = false;
+
+    stopButton.disabled = true;
+
+  }
+);
+
+
+/* ---------------------------
+   SUBMIT RECORDING
+---------------------------- */
+
+document
+.getElementById("recordForm")
+.addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+
+    if (!audioBlob) {
+
+      status.textContent =
+        "Please record your voice first.";
+
+      return;
+
+    }
+
+
+    const name =
+      document
+      .getElementById("name")
+      .value
+      .trim();
+
+
+    const accountName =
+      document
+      .getElementById("accountName")
+      .value
+      .trim();
+
+
+    const accountNumber =
+      document
+      .getElementById("accountNumber")
+      .value
+      .trim();
+
+
+    const bankName =
+      document
+      .getElementById("bankName")
+      .value
+      .trim();
+
+
+    const location =
+      document
+      .getElementById("location")
+      .value
+      .trim();
+
+
+    const title =
+      document
+      .getElementById("title")
+      .value
+      .trim();
+
+
+    if (
+      !name ||
+      !accountName ||
+      !bankName ||
+      !/^\d{10}$/.test(accountNumber)
+    ) {
+
+      status.textContent =
+        "Please check your details. Account number must be 10 digits.";
+
+      return;
+
+    }
+
+
+    submitButton.disabled = true;
+
+    status.textContent =
+      "Uploading your recording... Please wait.";
+
+
+    try {
+
+      const extension =
+        audioBlob.type.includes("mp4")
+          ? "m4a"
+          : "webm";
+
+
+      const fileName =
+        crypto.randomUUID()
+        + "."
+        + extension;
+
+
+      /* UPLOAD AUDIO */
+
+      const upload =
+        await supabase
+          .storage
+          .from(BUCKET)
+          .upload(
+            fileName,
+            audioBlob,
+            {
+              contentType:
+                audioBlob.type ||
+                "audio/webm",
+
+              upsert: false
+            }
+          );
+
+
+      if (upload.error) {
+
+        throw upload.error;
+
+      }
+
+
+      /* GET PUBLIC URL */
+
+      const publicUrl =
+        supabase
+          .storage
+          .from(BUCKET)
+          .getPublicUrl(fileName);
+
+
+      const audioUrl =
+        publicUrl.data.publicUrl;
+
+
+      /* SAVE RECORD */
+
+      const { error } =
+        await supabase
+          .from("voices")
+          .insert({
+
+            admin_name: name,
+
+            audio_url: audioUrl,
+
+            created_at:
+              new Date().toISOString(),
+
+            duration:
+              Math.round(recordingSeconds),
+
+            location:
+              location || null,
+
+            status:
+              "UNCHECKED",
+
+            account_name:
+              accountName,
+
+            account_number:
+              accountNumber,
+
+            bank_name:
+              bankName,
+
+            bank_account:
+              accountNumber,
+
+            bio:
+              title || null
+
+          });
+
+
+      if (error) {
+
+        throw error;
+
+      }
+
+
+      /* SUCCESS */
+
+      status.textContent =
+        "✅ Recording submitted successfully!\n\nThank you for contributing your Naija Pidgin voice.";
+
+      audioBlob = null;
+
+      chunks = [];
+
+      timer.textContent = "00:00";
+
+      document
+        .getElementById("recordForm")
+        .reset();
+
+      submitButton.disabled = true;
+
+    }
+
+    catch (error) {
+
+      status.textContent =
+        "❌ Submission failed:\n"
+        + error.message;
+
+      submitButton.disabled = false;
+
+    }
+
+  }
+);
+
+
+/* LOAD ANNOUNCEMENT */
+
+loadAnnouncement();
+
 </script>
+
 </body>
 </html>
