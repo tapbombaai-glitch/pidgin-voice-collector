@@ -1,172 +1,1737 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chairman Admin - Ademi DELETE</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:520px;margin:auto}
-.card{background:rgba(255,255,255,0.08);border-radius:12px;padding:10px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.12)}
-.btn{padding:10px 14px;border-radius:8px;border:none;font-weight:800;cursor:pointer;font-size:11px}
-.btn-green{background:#2ed573;color:#000}
-.btn-red{background:#ff4757;color:#fff}
-.btn-yellow{background:#f1c40f;color:#000}
-.btn-blue{background:#3b82f6;color:#fff}
-.top{background:linear-gradient(135deg,#667eea,#764ba2);padding:14px;border-radius:12px;text-align:center;margin-bottom:12px;border:2px solid #f1c40f}
-.playBtn{background:#3b82f6;color:#fff;padding:6px 12px;border-radius:20px;border:none;font-size:12px}
-textarea{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #555;font-size:14px;min-height:70px;margin-top:8px}
-input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555;font-size:13px}
-.middleBox{display:none;background:rgba(0,0,0,0.45);border:2px dashed #f1c40f;border-radius:10px;padding:10px;margin-top:10px}
-.acctBox{background:#000;border:2px solid #2ed573;border-radius:10px;padding:10px;margin:8px 0}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ademi Pidgin Voice - Admin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f7f4;
+      color: #17202a;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    header {
+      background: #123b2e;
+      color: white;
+      padding: 25px;
+      border-radius: 18px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 18px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.06);
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd6d1;
+      border-radius: 9px;
+      font-size: 15px;
+      margin-top: 6px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    button {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 9px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 3px;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .green {
+      background: #087f5b;
+      color: white;
+    }
+
+    .gray {
+      background: #e5eee9;
+      color: #123b2e;
+    }
+
+    .red {
+      background: #ffe3e3;
+      color: #a51d1d;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .status {
+      background: #eef4f1;
+      padding: 12px;
+      border-radius: 9px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 15px 0;
+    }
+
+    .filters button.active {
+      background: #087f5b;
+      color: white;
+    }
+
+    .voice {
+      border: 1px solid #d7e1dc;
+      border-radius: 13px;
+      padding: 16px;
+      margin-top: 15px;
+    }
+
+    .voice h3 {
+      margin-top: 0;
+    }
+
+    .voice audio {
+      width: 100%;
+      margin: 12px 0;
+    }
+
+    .details {
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(200px, 1fr)
+      );
+      gap: 12px;
+    }
+
+    .small {
+      color: #52615a;
+      font-size: 14px;
+    }
+
+    .danger-box {
+      background: #fff4f4;
+      padding: 12px;
+      border-radius: 9px;
+      color: #8d2020;
+    }
+  </style>
 </head>
+
 <body>
-<div class="top">
-<h3>Chairman Dashboard</h3>
-<div id="stats" style="margin-top:8px;font-size:13px">Loading...</div>
-<div style="margin-top:8px">
-<button class="btn btn-yellow" onclick="filter='all';load()">All</button>
-<button class="btn btn-yellow" onclick="filter='UNCHECKED';load()">Waiting</button>
-<button class="btn btn-green" onclick="filter='QUALIFIED';load()">Good</button>
-<button class="btn btn-red" onclick="filter='REJECTED';load()">Bad</button>
-<button class="btn btn-blue" onclick="filter='PAID';load()">PAID ✅</button>
-</div>
+
+<div class="container">
+
+  <header>
+    <h1>Ademi Pidgin Voice</h1>
+    <p>Chairman Admin Dashboard</p>
+  </header>
+
+
+  <!-- LOGIN -->
+
+  <section class="card" id="loginSection">
+
+    <h2>Admin Login</h2>
+
+    <p class="small">
+      Only authorized admin accounts should use this page.
+    </p>
+
+    <form id="loginForm">
+
+      <label>Email</label>
+      <input
+        id="email"
+        type="email"
+        required
+        autocomplete="username"
+      >
+
+      <label>Password</label>
+      <input
+        id="password"
+        type="password"
+        required
+        autocomplete="current-password"
+      >
+
+      <button
+        class="green"
+        type="submit"
+      >
+        Sign In
+      </button>
+
+    </form>
+
+    <div
+      id="loginStatus"
+      class="status"
+    >
+      Enter your admin account.
+    </div>
+
+  </section>
+
+
+  <!-- DASHBOARD -->
+
+  <div
+    id="dashboard"
+    class="hidden"
+  >
+
+    <section class="card">
+
+      <div class="grid">
+
+        <div>
+          <h2>Recordings</h2>
+
+          <div
+            id="counts"
+            class="small"
+          >
+            Loading...
+          </div>
+        </div>
+
+        <div>
+
+          <label>
+            Search
+          </label>
+
+          <input
+            id="search"
+            type="text"
+            placeholder="Search contributor, bank..."
+          >
+
+        </div>
+
+        <div>
+
+          <button
+            id="refreshButton"
+            class="gray"
+          >
+            🔄 Refresh
+          </button>
+
+          <button
+            id="logoutButton"
+            class="red"
+          >
+            Sign Out
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- FILTERS -->
+
+      <div class="filters">
+
+        <button
+          class="active"
+          data-filter="ALL"
+        >
+          All
+        </button>
+
+        <button
+          data-filter="UNCHECKED"
+        >
+          Unchecked
+        </button>
+
+        <button
+          data-filter="QUALIFIED"
+        >
+          Qualified
+        </button>
+
+        <button
+          data-filter="REJECTED"
+        >
+          Rejected
+        </button>
+
+        <button
+          data-filter="PAID"
+        >
+          Paid
+        </button>
+
+      </div>
+
+
+      <div
+        id="mainStatus"
+        class="status"
+      >
+        Loading recordings...
+      </div>
+
+
+      <div id="voices"></div>
+
+    </section>
+
+
+    <!-- ANNOUNCEMENT -->
+
+    <section class="card">
+
+      <h2>📢 Announcement</h2>
+
+      <p class="small">
+        This message will appear on the recording page.
+      </p>
+
+      <textarea
+        id="announcementText"
+        rows="4"
+        placeholder="Write announcement here..."
+      ></textarea>
+
+      <button
+        id="publishAnnouncement"
+        class="green"
+      >
+        Publish Announcement
+      </button>
+
+      <button
+        id="clearAnnouncement"
+        class="red"
+      >
+        Clear Announcement
+      </button>
+
+      <div
+        id="announcementStatus"
+        class="status"
+      ></div>
+
+    </section>
+
+  </div>
+
 </div>
 
-<div class="card" style="border:2px solid #f1c40f;background:rgba(241,196,15,0.15)">
-<div style="font-weight:800;color:#f1c40f">📢 ANNOUNCEMENT FOR WORKERS</div>
-<textarea id="announceText" placeholder="Type announcement here"></textarea>
-<div style="display:flex;gap:6px;margin-top:8px">
-<button class="btn btn-yellow" style="flex:1" onclick="saveAnnounce()">📢 Post Announcement</button>
-<button class="btn" style="flex:1;background:#444;color:#fff" onclick="clearAnnounce()">Clear</button>
-</div>
-<div id="announceStatus" style="font-size:11px;margin-top:6px;opacity:0.8"></div>
-<div id="currentAnnounce" style="margin-top:8px;background:rgba(0,0,0,0.3);padding:8px;border-radius:8px;font-size:12px"></div>
-</div>
 
-<div id="list">Loading voices...</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 
 <script>
-const SUPA_URL="https://rupuxvpupdhlhxgjrbsh.supabase.co";
-const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
-const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
-const RATE=500/5400;
-let filter='UNCHECKED';
 
-async function saveAnnounce(){
-const text=document.getElementById('announceText').value.trim();
-if(!text){alert('Type announcement first');return}
-document.getElementById('announceStatus').innerText='Posting...';
-try{
-const {error}=await sb.from('announcements').insert([{message:text}]);
-if(error){localStorage.setItem('ademi_announcement',text);document.getElementById('announceStatus').innerText='✅ Saved locally';}
-else{document.getElementById('announceStatus').innerText='✅ Posted!';}
-loadAnnounce();
-}catch(e){localStorage.setItem('ademi_announcement',text);loadAnnounce();}
-}
-async function clearAnnounce(){
-if(!confirm('Clear announcement?'))return;
-localStorage.removeItem('ademi_announcement');
-try{await sb.from('announcements').delete().neq('id','00000000-0000-0000-0000-000000000000');}catch(e){}
-document.getElementById('announceText').value='';document.getElementById('currentAnnounce').innerHTML='';document.getElementById('announceStatus').innerText='Cleared';
-}
-async function loadAnnounce(){
-let text=localStorage.getItem('ademi_announcement')||'';
-try{const {data}=await sb.from('announcements').select('*').order('created_at',{ascending:false}).limit(1);if(data&&data[0]) text=data[0].message;}catch(e){}
-if(text) document.getElementById('currentAnnounce').innerHTML='<b>Current:</b> '+text;
-}
+/* =========================================
+   SUPABASE
+========================================= */
 
-async function load(){
-let q=sb.from('voices').select('*').order('created_at',{ascending:false}).limit(100);
-if(filter==='PAID') q=q.eq('is_paid',true);
-else if(filter!='all') q=q.eq('status',filter);
-const {data}=await q;
-if(!data){document.getElementById('list').innerHTML='No data';return}
-let totalSecs=0,waiting=0,toPay=0;
-data.forEach(v=>{totalSecs+=parseFloat(v.duration_seconds||0); if(v.status=='UNCHECKED')waiting++; if(v.status=='QUALIFIED' &&!v.is_paid) toPay+=(parseFloat(v.approved_duration_seconds||v.duration_seconds))*RATE});
-document.getElementById('stats').innerHTML=`Total: ${data.length} • ${Math.floor(totalSecs)}s • Waiting: ${waiting} • <b style="color:#2ed573">TO PAY: ₦${toPay.toFixed(2)}</b>`;
-document.getElementById('list').innerHTML=data.map(v=>{
-const secs=Math.round(v.duration_seconds||0);
-const appr=Math.round(v.approved_duration_seconds||secs);
-const earn=appr*RATE;
-const accName = v.account_name || v.name || 'No Name';
-const accNo = v.account_number || v.bank_account || v.account_no || '';
-const bank = v.bank_name || v.bank || 'Moni Point';
-return `<div class="card" id="card-${v.id}">
-<div style="display:flex;justify-content:space-between;align-items:center">
-<div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
-<button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
-</div>
+const SUPABASE_URL =
+"https://rupuxvpupdhlhxgjrbsh.supabase.co";
 
-<div class="acctBox">
-<div style="font-size:10px;color:#f1c40f;font-weight:900">💳 ACCOUNT TO PAY - BIG</div>
-<div><span style="font-size:10px;color:#aaa">NAME:</span> <b style="font-size:14px;color:#fff">${accName}</b></div>
-<div><span style="font-size:10px;color:#aaa">NUMBER:</span> <b style="font-size:18px;color:#2ed573">${accNo}</b> <button class="btn btn-blue" style="padding:3px 8px" onclick="copyText('${accNo}')">COPY</button></div>
-<div style="font-size:11px"><span style="color:#aaa">BANK:</span> ${bank} • ${secs}s • ${v.location||''}</div>
-<div style="display:flex;gap:5px;margin-top:8px">
-<button class="btn btn-green" style="flex:1" onclick="markPaid('${v.id}','${v.name||''}','${accName}','${accNo}','${bank}',${earn.toFixed(2)})">PAID ✅ + SAVE</button>
-<button class="btn btn-red" style="flex:1" onclick="deleteVoice('${v.id}')">🗑️ DELETE</button>
-</div>
-</div>
+const SUPABASE_KEY =
+"sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hp";
 
-<audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
-<div style="display:flex;gap:4px;margin-top:8px">
-<input id="adj-${v.id}" type="number" value="${secs}" style="width:55px;border:2px solid #f1c40f;text-align:center">
-<button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">CUT END</button>
-<button class="btn btn-blue" style="flex:1;font-size:11px" onclick="toggleMiddle('${v.id}')">MIDDLE</button>
-<button class="btn btn-green" style="flex:1" onclick="approve('${v.id}',${secs})">ALL GOOD</button>
-<button class="btn btn-red" style="flex:1" onclick="reject('${v.id}')">REJECT</button>
-</div>
-<div id="middle-${v.id}" class="middleBox">
-<div style="font-weight:800;color:#f1c40f;font-size:13px">✂️ MIDDLE CUT - 3 BOXES</div>
-<div style="display:flex;gap:5px;margin-top:6px">
-<div style="flex:1"><label style="font-size:9px">FIRST GOOD</label><input id="fg-${v.id}" type="number" placeholder="40" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
-<div style="flex:1"><label style="font-size:9px;color:#ff6b81">BAD</label><input id="bad-${v.id}" type="number" placeholder="30" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
-<div style="flex:1"><label style="font-size:9px">SECOND GOOD</label><input id="sg-${v.id}" type="number" placeholder="57" style="width:100%" oninput="calcMiddle('${v.id}')"></div>
-</div>
-<textarea id="note-${v.id}" placeholder="Why bad?" style="min-height:40px;margin-top:6px"></textarea>
-<div id="calc-${v.id}" style="background:#111;padding:8px;border-radius:6px;margin-top:6px;font-size:11px;font-weight:800;color:#2ed573">Fill boxes</div>
-<button class="btn btn-yellow" style="width:100%;margin-top:8px" onclick="approveMiddle('${v.id}',${secs})">✅ APPROVE MIDDLE</button>
-</div>
-<div id="msg-${v.id}" style="font-size:11px;margin-top:6px;font-weight:800;color:#2ed573"></div>
-</div>`;
-}).join('');
-}
+const supabase =
+window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-function toggleMiddle(id){const b=document.getElementById('middle-'+id);b.style.display=b.style.display=='block'?'none':'block';}
-function calcMiddle(id){
-const fg=parseInt(document.getElementById('fg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const orig=parseInt(document.getElementById('adj-'+id).value)||0;const approved=fg+sg;
-document.getElementById('calc-'+id).innerHTML=approved>0?`ORIG ${orig}s | GOOD ${approved}s = ₦${(approved*RATE).toFixed(2)} | BAD ${bad}s comot`:'Fill boxes';
-}
-function copyText(t){navigator.clipboard.writeText(t);alert('Copied: '+t);}
 
-// DELETE FUNCTION - THIS IS WHAT YOU ASK
-async function deleteVoice(id){
-if(!confirm('DELETE this voice permanently? E go comot forever o!')) return;
-const {error}=await sb.from('voices').delete().eq('id',id);
-if(error) alert('❌ '+error.message);
-else{alert('✅ Deleted forever');load();}
-}
+/* =========================================
+   VARIABLES
+========================================= */
 
-// PAID + SAVE TO HISTORY
-async function markPaid(id, name, accName, accNo, bank, amount){
-if(!confirm(`You don pay ${name} - ₦${amount}?\nMove to PAID HISTORY?`)) return;
-try{
-let hist=JSON.parse(localStorage.getItem('chairman_paid_history')||'[]');
-hist.unshift({name, accName, accNo, bank, amount, date: new Date().toLocaleString()});
-localStorage.setItem('chairman_paid_history', JSON.stringify(hist));
-}catch(e){}
-try{await sb.from('voices').update({is_paid:true, paid_at:new Date().toISOString()}).eq('id',id);}catch(e){await sb.from('voices').update({is_paid:true}).eq('id',id);}
-alert('✅ Saved to PAID ✅ tab');load();
+let recordings = [];
+
+let currentFilter = "ALL";
+
+let currentUser = null;
+
+
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const loginSection =
+document.getElementById("loginSection");
+
+const dashboard =
+document.getElementById("dashboard");
+
+const loginForm =
+document.getElementById("loginForm");
+
+const loginStatus =
+document.getElementById("loginStatus");
+
+const voices =
+document.getElementById("voices");
+
+const mainStatus =
+document.getElementById("mainStatus");
+
+const counts =
+document.getElementById("counts");
+
+const search =
+document.getElementById("search");
+
+
+/* =========================================
+   SESSION CHECK
+========================================= */
+
+async function checkSession() {
+
+  const {
+    data
+  } =
+  await supabase.auth.getSession();
+
+  currentUser =
+    data.session
+      ? data.session.user
+      : null;
+
+
+  if (currentUser) {
+
+    loginSection
+      .classList
+      .add("hidden");
+
+    dashboard
+      .classList
+      .remove("hidden");
+
+    loadRecordings();
+
+  }
+
+  else {
+
+    loginSection
+      .classList
+      .remove("hidden");
+
+    dashboard
+      .classList
+      .add("hidden");
+
+  }
+
 }
 
-async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs}).eq('id',id);load();}
-async function adjust(id){const val=parseInt(document.getElementById('adj-'+id).value);if(val<=0)return alert('Put secs');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val}).eq('id',id);load();}
-async function approveMiddle(id,orig){const fg=parseInt(document.getElementById('fg-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const approved=fg+sg;if(approved<=0)return alert('Fill boxes');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:approved,inspector_note:`MIDDLE CUT ${approved}s BAD ${bad}s removed`}).eq('id',id);load();}
-async function reject(id){if(!confirm('Reject?'))return;await sb.from('voices').update({status:'REJECTED'}).eq('id',id);load();}
-load();loadAnnounce();
+
+/* =========================================
+   LOGIN
+========================================= */
+
+loginForm.addEventListener(
+  "submit",
+  async event => {
+
+    event.preventDefault();
+
+
+    loginStatus.textContent =
+      "Signing in...";
+
+
+    const email =
+      document
+      .getElementById("email")
+      .value
+      .trim();
+
+
+    const password =
+      document
+      .getElementById("password")
+      .value;
+
+
+    const {
+      error
+    } =
+    await supabase.auth.signInWithPassword({
+
+      email: email,
+
+      password: password
+
+    });
+
+
+    if (error) {
+
+      loginStatus.textContent =
+        "Login failed: "
+        + error.message;
+
+      return;
+
+    }
+
+
+    loginStatus.textContent =
+      "Login successful.";
+
+    checkSession();
+
+  }
+);
+
+
+/* =========================================
+   LOGOUT
+========================================= */
+
+document
+.getElementById("logoutButton")
+.addEventListener(
+  "click",
+  async () => {
+
+    await supabase.auth.signOut();
+
+    recordings = [];
+
+    checkSession();
+
+  }
+);
+
+
+/* =========================================
+   LOAD RECORDINGS
+========================================= */
+
+async function loadRecordings() {
+
+  mainStatus.textContent =
+    "Loading recordings...";
+
+
+  const {
+    data,
+    error
+  } =
+  await supabase
+    .from("voices")
+    .select("*")
+    .order(
+      "created_at",
+      {
+        ascending: false
+      }
+    )
+    .limit(500);
+
+
+  if (error) {
+
+    mainStatus.textContent =
+      "Could not load recordings:\n"
+      + error.message;
+
+    return;
+
+  }
+
+
+  recordings =
+    data || [];
+
+
+  updateCounts();
+
+  renderRecordings();
+
+
+  if (recordings.length === 0) {
+
+    mainStatus.textContent =
+      "No recordings submitted yet.";
+
+  }
+
+  else {
+
+    mainStatus.textContent =
+      recordings.length
+      + " recording(s) loaded.";
+
+  }
+
+}
+
+
+/* =========================================
+   COUNTS
+========================================= */
+
+function updateCounts() {
+
+  let unchecked = 0;
+
+  let qualified = 0;
+
+  let rejected = 0;
+
+  let paid = 0;
+
+
+  recordings.forEach(
+    recording => {
+
+      const status =
+        String(
+          recording.status ||
+          "UNCHECKED"
+        ).toUpperCase();
+
+
+      if (status === "UNCHECKED")
+        unchecked++;
+
+      if (status === "QUALIFIED")
+        qualified++;
+
+      if (status === "REJECTED")
+        rejected++;
+
+      if (
+        status === "PAID" ||
+        recording.is_paid === true
+      )
+        paid++;
+
+    }
+  );
+
+
+  counts.textContent =
+    "Total: "
+    + recordings.length
+    + " | Unchecked: "
+    + unchecked
+    + " | Qualified: "
+    + qualified
+    + " | Rejected: "
+    + rejected
+    + " | Paid: "
+    + paid;
+
+}
+
+
+/* =========================================
+   ESCAPE HTML
+========================================= */
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+/* =========================================
+   RENDER
+========================================= */
+
+function renderRecordings() {
+
+  const query =
+    search.value
+      .trim()
+      .toLowerCase();
+
+
+  const filtered =
+    recordings.filter(
+      recording => {
+
+        const status =
+          String(
+            recording.status ||
+            "UNCHECKED"
+          ).toUpperCase();
+
+
+        let filterMatch = true;
+
+
+        if (
+          currentFilter !== "ALL"
+        ) {
+
+          if (
+            currentFilter === "PAID"
+          ) {
+
+            filterMatch =
+              status === "PAID" ||
+              recording.is_paid === true;
+
+          }
+
+          else {
+
+            filterMatch =
+              status === currentFilter;
+
+          }
+
+        }
+
+
+        const searchable = [
+
+          recording.admin_name,
+
+          recording.account_name,
+
+          recording.account_number,
+
+          recording.bank_name,
+
+          recording.bank_account,
+
+          recording.location,
+
+          recording.status,
+
+          recording.bio
+
+        ]
+        .join(" ")
+        .toLowerCase();
+
+
+        return (
+          filterMatch &&
+          searchable.includes(query)
+        );
+
+      }
+    );
+
+
+  voices.innerHTML = "";
+
+
+  filtered.forEach(
+    recording => {
+
+      voices.appendChild(
+        createRecordingCard(
+          recording
+        )
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================
+   RECORDING CARD
+========================================= */
+
+function createRecordingCard(
+  recording
+) {
+
+  const card =
+    document.createElement("div");
+
+  card.className =
+    "voice";
+
+
+  const status =
+    String(
+      recording.status ||
+      "UNCHECKED"
+    ).toUpperCase();
+
+
+  const originalDuration =
+    Number(
+      recording.duration || 0
+    );
+
+
+  const approvedDuration =
+    Number(
+      recording.second_duration_seconds ??
+      recording.approved_duration_seconds ??
+      recording.duration ??
+      0
+    );
+
+
+  const amount =
+    Number(
+      recording.amount || 0
+    );
+
+
+  const paid =
+    status === "PAID" ||
+    recording.is_paid === true;
+
+
+  card.innerHTML = `
+
+    <h3>
+      ${escapeHTML(
+        recording.admin_name ||
+        "Unnamed contributor"
+      )}
+
+      <span class="small">
+        • ${escapeHTML(status)}
+      </span>
+    </h3>
+
+
+    ${
+      recording.audio_url
+      ?
+      `
+      <audio
+        controls
+        preload="none"
+        src="${escapeHTML(
+          recording.audio_url
+        )}"
+      ></audio>
+      `
+      :
+      `
+      <div class="danger-box">
+        No audio URL found.
+      </div>
+      `
+    }
+
+
+    <div class="details">
+
+      <strong>Submitted:</strong>
+      ${escapeHTML(
+        recording.created_at ||
+        "Unknown"
+      )}
+      <br>
+
+      <strong>Original duration:</strong>
+      ${originalDuration} seconds
+      <br>
+
+      <strong>Approved/payable duration:</strong>
+      ${approvedDuration} seconds
+      <br>
+
+      <strong>Location:</strong>
+      ${escapeHTML(
+        recording.location ||
+        "Not supplied"
+      )}
+      <br>
+
+      <strong>Bank:</strong>
+      ${escapeHTML(
+        recording.bank_name ||
+        ""
+      )}
+      <br>
+
+      <strong>Account name:</strong>
+      ${escapeHTML(
+        recording.account_name ||
+        ""
+      )}
+      <br>
+
+      <strong>Account number:</strong>
+      ${escapeHTML(
+        recording.account_number ||
+        recording.bank_account ||
+        ""
+      )}
+      <br>
+
+      <strong>Notes:</strong>
+      ${escapeHTML(
+        recording.bio ||
+        "None"
+      )}
+      <br>
+
+      <strong>Amount:</strong>
+      ₦${amount.toLocaleString()}
+
+      ${
+        paid
+        ?
+        `
+        <br>
+        <strong>Payment status:</strong>
+        ✅ PAID
+        `
+        :
+        ""
+      }
+
+    </div>
+
+
+    <div class="grid">
+
+      <div>
+
+        <label>
+          Approved duration
+        </label>
+
+        <input
+          class="approvedDuration"
+          type="number"
+          min="0"
+          step="1"
+          value="${approvedDuration}"
+        >
+
+      </div>
+
+
+      <div>
+
+        <label>
+          Amount to pay
+        </label>
+
+        <input
+          class="amount"
+          type="number"
+          min="0"
+          step="1"
+          value="${amount}"
+        >
+
+      </div>
+
+
+      <div>
+
+        <label>
+          Reviewer note
+        </label>
+
+        <input
+          class="reviewerNote"
+          type="text"
+          maxlength="1000"
+          placeholder="Optional note"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div>
+
+      <button
+        class="green"
+        data-action="save"
+      >
+        💾 Save Review
+      </button>
+
+
+      <button
+        class="gray"
+        data-action="approve"
+      >
+        ✅ Approve
+      </button>
+
+
+      <button
+        class="gray"
+        data-action="middle"
+      >
+        ⏱️ Set Approved Time
+      </button>
+
+
+      <button
+        class="red"
+        data-action="reject"
+      >
+        ❌ Reject
+      </button>
+
+
+      <button
+        class="green"
+        data-action="paid"
+      >
+        💰 Mark Paid
+      </button>
+
+
+      <button
+        class="red"
+        data-action="delete"
+      >
+        🗑 Delete
+      </button>
+
+    </div>
+
+
+    <div class="status result"></div>
+
+  `;
+
+
+  return card;
+
+}
+
+
+/* =========================================
+   BUTTON ACTIONS
+========================================= */
+
+voices.addEventListener(
+  "click",
+  async event => {
+
+    const button =
+      event.target.closest(
+        "button[data-action]"
+      );
+
+
+    if (!button)
+      return;
+
+
+    const card =
+      button.closest(".voice");
+
+
+    const action =
+      button.dataset.action;
+
+
+    const cards =
+      Array.from(
+        document.querySelectorAll(
+          ".voice"
+        )
+      );
+
+
+    const index =
+      cards.indexOf(card);
+
+
+    const visible =
+      recordings.filter(
+        recording => {
+
+          const status =
+            String(
+              recording.status ||
+              "UNCHECKED"
+            ).toUpperCase();
+
+          const query =
+            search.value
+              .trim()
+              .toLowerCase();
+
+
+          let filterMatch = true;
+
+
+          if (
+            currentFilter !== "ALL"
+          ) {
+
+            filterMatch =
+              currentFilter === "PAID"
+              ?
+              (
+                status === "PAID" ||
+                recording.is_paid === true
+              )
+              :
+              status === currentFilter;
+
+          }
+
+
+          const searchable = [
+
+            recording.admin_name,
+            recording.account_name,
+            recording.account_number,
+            recording.bank_name,
+            recording.bank_account,
+            recording.location,
+            recording.status,
+            recording.bio
+
+          ]
+          .join(" ")
+          .toLowerCase();
+
+
+          return (
+            filterMatch &&
+            searchable.includes(query)
+          );
+
+        }
+      );
+
+
+    const recording =
+      visible[index];
+
+
+    if (!recording)
+      return;
+
+
+    const result =
+      card.querySelector(
+        ".result"
+      );
+
+
+    try {
+
+      button.disabled = true;
+
+      result.textContent =
+        "Saving...";
+
+
+      /* DELETE */
+
+      if (action === "delete") {
+
+        const confirmDelete =
+          confirm(
+            "Are you sure you want to delete this recording record?"
+          );
+
+
+        if (!confirmDelete) {
+
+          button.disabled = false;
+
+          result.textContent = "";
+
+          return;
+
+        }
+
+
+        const {
+          error
+        } =
+        await supabase
+          .from("voices")
+          .delete()
+          .eq(
+            "id",
+            recording.id
+          );
+
+
+        if (error)
+          throw error;
+
+
+        result.textContent =
+          "Deleted.";
+
+        await loadRecordings();
+
+        return;
+
+      }
+
+
+      /* INPUT VALUES */
+
+      const approvedInput =
+        Number(
+          card
+          .querySelector(
+            ".approvedDuration"
+          )
+          .value
+        );
+
+
+      const amountInput =
+        Number(
+          card
+          .querySelector(
+            ".amount"
+          )
+          .value
+        );
+
+
+      const note =
+        card
+        .querySelector(
+          ".reviewerNote"
+        )
+        .value
+        .trim();
+
+
+      if (
+        !Number.isFinite(
+          approvedInput
+        ) ||
+        approvedInput < 0
+      ) {
+
+        throw new Error(
+          "Approved duration is not valid."
+        );
+
+      }
+
+
+      if (
+        !Number.isFinite(
+          amountInput
+        ) ||
+        amountInput < 0
+      ) {
+
+        throw new Error(
+          "Amount is not valid."
+        );
+
+      }
+
+
+      const updateData = {
+
+        second_duration_seconds:
+          approvedInput,
+
+        amount:
+          Math.round(
+            amountInput
+          )
+
+      };
+
+
+      /* APPROVE */
+
+      if (
+        action === "approve"
+      ) {
+
+        updateData.status =
+          "QUALIFIED";
+
+      }
+
+
+      /* REJECT */
+
+      if (
+        action === "reject"
+      ) {
+
+        updateData.status =
+          "REJECTED";
+
+      }
+
+
+      /* PAID */
+
+      if (
+        action === "paid"
+      ) {
+
+        updateData.status =
+          "PAID";
+
+        updateData.is_paid =
+          true;
+
+        updateData.paid_at =
+          new Date()
+          .toISOString();
+
+      }
+
+
+      /* SET APPROVED TIME */
+
+      if (
+        action === "middle"
+      ) {
+
+        updateData.status =
+          "QUALIFIED";
+
+      }
+
+
+      /* NOTE */
+
+      if (note) {
+
+        updateData.inspector_note =
+          note;
+
+      }
+
+
+      /* SAVE */
+
+      const {
+        error
+      } =
+      await supabase
+        .from("voices")
+        .update(updateData)
+        .eq(
+          "id",
+          recording.id
+        );
+
+
+      if (error)
+        throw error;
+
+
+      result.textContent =
+        "✅ Saved successfully.";
+
+
+      await loadRecordings();
+
+    }
+
+    catch (error) {
+
+      result.textContent =
+        "❌ Error: "
+        + error.message;
+
+    }
+
+    finally {
+
+      button.disabled = false;
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   FILTERS
+========================================= */
+
+document
+.querySelector(".filters")
+.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest(
+        "button[data-filter]"
+      );
+
+
+    if (!button)
+      return;
+
+
+    currentFilter =
+      button.dataset.filter;
+
+
+    document
+      .querySelectorAll(
+        ".filters button"
+      )
+      .forEach(
+        item =>
+          item.classList.toggle(
+            "active",
+            item === button
+          )
+      );
+
+
+    renderRecordings();
+
+  }
+);
+
+
+/* =========================================
+   SEARCH
+========================================= */
+
+search.addEventListener(
+  "input",
+  renderRecordings
+);
+
+
+/* =========================================
+   REFRESH
+========================================= */
+
+document
+.getElementById("refreshButton")
+.addEventListener(
+  "click",
+  loadRecordings
+);
+
+
+/* =========================================
+   ANNOUNCEMENT
+========================================= */
+
+async function loadAnnouncement() {
+
+  const {
+    data,
+    error
+  } =
+  await supabase
+    .from("announcements")
+    .select("*")
+    .order(
+      "created_at",
+      {
+        ascending: false
+      }
+    )
+    .limit(1);
+
+
+  if (error)
+    return;
+
+
+  if (
+    data &&
+    data.length > 0
+  ) {
+
+    const latest =
+      data[0];
+
+
+    document
+      .getElementById(
+        "announcementText"
+      )
+      .value =
+        latest.message ||
+        latest.content ||
+        latest.title ||
+        "";
+
+  }
+
+}
+
+
+/* =========================================
+   PUBLISH ANNOUNCEMENT
+========================================= */
+
+document
+.getElementById(
+  "publishAnnouncement"
+)
+.addEventListener(
+  "click",
+  async () => {
+
+    const message =
+      document
+      .getElementById(
+        "announcementText"
+      )
+      .value
+      .trim();
+
+
+    if (!message) {
+
+      document
+        .getElementById(
+          "announcementStatus"
+        )
+        .textContent =
+          "Write an announcement first.";
+
+      return;
+
+    }
+
+
+    const {
+      error
+    } =
+    await supabase
+      .from("announcements")
+      .insert({
+        message: message
+      });
+
+
+    document
+      .getElementById(
+        "announcementStatus"
+      )
+      .textContent =
+        error
+        ?
+        "Error: "
+        + error.message
+        :
+        "✅ Announcement published.";
+
+  }
+);
+
+
+/* =========================================
+   CLEAR ANNOUNCEMENT
+========================================= */
+
+document
+.getElementById(
+  "clearAnnouncement"
+)
+.addEventListener(
+  "click",
+  async () => {
+
+    if (
+      !confirm(
+        "Clear the latest announcement?"
+      )
+    )
+      return;
+
+
+    const {
+      data,
+      error
+    } =
+    await supabase
+      .from("announcements")
+      .select("id")
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      )
+      .limit(1);
+
+
+    if (error) {
+
+      document
+        .getElementById(
+          "announcementStatus"
+        )
+        .textContent =
+          error.message;
+
+      return;
+
+    }
+
+
+    if (
+      !data ||
+      data.length === 0
+    ) {
+
+      document
+        .getElementById(
+          "announcementStatus"
+        )
+        .textContent =
+          "No announcement found.";
+
+      return;
+
+    }
+
+
+    const {
+      error: deleteError
+    } =
+    await supabase
+      .from("announcements")
+      .delete()
+      .eq(
+        "id",
+        data[0].id
+      );
+
+
+    document
+      .getElementById(
+        "announcementStatus"
+      )
+      .textContent =
+        deleteError
+        ?
+        deleteError.message
+        :
+        "✅ Announcement cleared.";
+
+  }
+);
+
+
+/* =========================================
+   AUTH LISTENER
+========================================= */
+
+supabase.auth.onAuthStateChange(
+  (_event, session) => {
+
+    currentUser =
+      session?.user || null;
+
+
+    if (currentUser) {
+
+      loginSection
+        .classList
+        .add("hidden");
+
+      dashboard
+        .classList
+        .remove("hidden");
+
+      setTimeout(
+        loadRecordings,
+        0
+      );
+
+    }
+
+    else {
+
+      loginSection
+        .classList
+        .remove("hidden");
+
+      dashboard
+        .classList
+        .add("hidden");
+
+    }
+
+  }
+);
+
+
+/* =========================================
+   START
+========================================= */
+
+checkSession();
+
+loadAnnouncement();
+
 </script>
+
 </body>
 </html>
