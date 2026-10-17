@@ -37,9 +37,8 @@ input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid 
 </div>
 </div>
 
-<!-- NEW: CHAIRMAN LIVE CALL + ONLINE -->
 <div class="card" style="border:2px solid #2ed573;background:rgba(46,213,115,0.12)">
-<div style="font-weight:900;color:#2ed573">📞 CHAIRMAN LIVE CALL</div>
+<div style="font-weight:900;color:#2ed573">📞 CHAIRMAN LIVE CALL - Money Dey Count LIVE</div>
 <div style="font-size:11px;margin-top:4px">Your Chairman ID:</div>
 <div id="chairPeerId" style="font-size:12px;font-weight:900;color:#f1c40f;background:#000;padding:6px;border-radius:6px;word-break:break-all;margin:4px 0">Loading...</div>
 <div style="display:flex;gap:6px">
@@ -76,8 +75,19 @@ const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 const RATE=500/5400;
 let filter='UNCHECKED';
 let peerObj=null, activeCall=null;
+let callSeconds=0, callTimer=null;
 
-// --- CHAIRMAN CALL LOGIC ---
+function startCallTimer(){
+ callSeconds=0;
+ if(callTimer) clearInterval(callTimer);
+ callTimer=setInterval(()=>{
+   callSeconds++;
+   const money=callSeconds*RATE;
+   document.getElementById('callStatus').innerHTML=`🔊 LIVE CONVERSATION! ${callSeconds}s = ₦${money.toFixed(2)} - Money dey count!`;
+ },1000);
+}
+function stopCallTimer(){ if(callTimer) clearInterval(callTimer); callTimer=null; callSeconds=0; }
+
 function initChairPeer(){
  const peerId = 'chairman_'+Math.floor(Math.random()*10000);
  peerObj = new Peer(peerId);
@@ -92,9 +102,11 @@ function initChairPeer(){
    call.answer(stream);
    call.on('stream', remoteStream=>{
      document.getElementById('remoteAudio').srcObject=remoteStream;
-     document.getElementById('callStatus').innerText='🔊 CONNECTED to worker!';
+     document.getElementById('callStatus').innerText='🔊 CONNECTED to worker! 0s = ₦0.00';
      document.getElementById('endCallBtn').style.display='block';
+     startCallTimer();
    });
+   call.on('close', ()=>{ stopCallTimer(); endCall(); });
    activeCall=call;
  });
 }
@@ -106,13 +118,16 @@ async function callWorker(peerId, name){
    const call = peerObj.call(peerId, stream);
    call.on('stream', remoteStream=>{
      document.getElementById('remoteAudio').srcObject=remoteStream;
-     document.getElementById('callStatus').innerText='🔊 CONNECTED to '+name+'!';
+     document.getElementById('callStatus').innerText='🔊 CONNECTED to '+name+'! 0s = ₦0.00';
      document.getElementById('endCallBtn').style.display='block';
+     startCallTimer();
    });
+   call.on('close', ()=>{ stopCallTimer(); endCall(); });
    activeCall=call;
  }catch(e){alert(e.message)}
 }
 function endCall(){
+ stopCallTimer();
  if(activeCall) activeCall.close();
  document.getElementById('remoteAudio').srcObject=null;
  document.getElementById('callStatus').innerText='✅ Call ended';
@@ -171,7 +186,7 @@ const {data}=await q;
 if(!data){document.getElementById('list').innerHTML='No data';return}
 let totalSecs=0,waiting=0,toPay=0;
 data.forEach(v=>{totalSecs+=parseFloat(v.duration_seconds||0); if(v.status=='UNCHECKED')waiting++; if(v.status=='QUALIFIED' &&!v.is_paid) toPay+=(parseFloat(v.approved_duration_seconds||v.duration_seconds))*RATE});
-document.getElementById('stats').innerHTML=`Total: ${data.length} • ${Math.floor(totalSecs)}s • Waiting: ${waiting} • <b style="color:#2ed573">TO PAY: ₦${toPay.toFixed(2)}</b>`;
+document.getElementById('stats').innerHTML=`Total: ${data.length} • ${Math.floor(totalSecs)}s • Waiting: ${waiting} • <b style="color:#2ed573">TO PAY: ₦${toPay.toFixed(2)}</b> • MIN ₦1,000`;
 document.getElementById('list').innerHTML=data.map(v=>{
 const secs=Math.round(v.duration_seconds||0);
 const appr=Math.round(v.approved_duration_seconds||secs);
@@ -179,18 +194,19 @@ const earn=appr*RATE;
 const accName = v.account_name || v.name || 'No Name';
 const accNo = v.account_number || v.bank_account || v.account_no || '';
 const bank = v.bank_name || v.bank || 'Moni Point';
+const canPay = earn >= 1000;
 return `<div class="card" id="card-${v.id}">
 <div style="display:flex;justify-content:space-between;align-items:center">
-<div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
+<div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)} ${canPay?'✅':'🔒'}</span></div>
 <button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
 </div>
 <div class="acctBox">
 <div style="font-size:10px;color:#f1c40f;font-weight:900">💳 ACCOUNT TO PAY - BIG</div>
 <div><span style="font-size:10px;color:#aaa">NAME:</span> <b style="font-size:14px;color:#fff">${accName}</b></div>
 <div><span style="font-size:10px;color:#aaa">NUMBER:</span> <b style="font-size:18px;color:#2ed573">${accNo}</b> <button class="btn btn-blue" style="padding:3px 8px" onclick="copyText('${accNo}')">COPY</button></div>
-<div style="font-size:11px"><span style="color:#aaa">BANK:</span> ${bank} • ${secs}s • ${v.location||''}</div>
+<div style="font-size:11px"><span style="color:#aaa">BANK:</span> ${bank} • ${secs}s • ${v.location||''} • ${canPay?'READY TO PAY ₦1,000+':'NEED ₦1,000'}</div>
 <div style="display:flex;gap:5px;margin-top:8px">
-<button class="btn btn-green" style="flex:1" onclick="markPaid('${v.id}','${v.name||''}','${accName}','${accNo}','${bank}',${earn.toFixed(2)})">PAID ✅ + SAVE</button>
+<button class="btn ${canPay?'btn-green':'btn-yellow'}" style="flex:1" onclick="markPaid('${v.id}','${(v.name||v.user_name||'').replace(/'/g,"\\'")}','${accName.replace(/'/g,"\\'")}','${accNo}','${bank}',${earn.toFixed(2)})">${canPay?'PAID ✅ + SAVE - Turn 0':'🔒 Need ₦1,000 (Now ₦'+earn.toFixed(0)+')'}</button>
 <button class="btn btn-red" style="flex:1" onclick="deleteVoice('${v.id}')">🗑️ DELETE</button>
 </div>
 </div>
@@ -231,14 +247,24 @@ if(error) alert('❌ '+error.message);
 else{alert('✅ Deleted forever');load();}
 }
 async function markPaid(id, name, accName, accNo, bank, amount){
-if(!confirm(`You don pay ${name} - ₦${amount}?\nMove to PAID HISTORY?`)) return;
-try{
-let hist=JSON.parse(localStorage.getItem('chairman_paid_history')||'[]');
-hist.unshift({name, accName, accNo, bank, amount, date: new Date().toLocaleString()});
-localStorage.setItem('chairman_paid_history', JSON.stringify(hist));
-}catch(e){}
-try{await sb.from('voices').update({is_paid:true, paid_at:new Date().toISOString()}).eq('id',id);}catch(e){await sb.from('voices').update({is_paid:true}).eq('id',id);}
-alert('✅ Saved to PAID ✅ tab');load();
+ if(parseFloat(amount) < 1000){
+   alert(`❌ CANNOT PAY ${name}!\n\nBalance: ₦${amount}\nMinimum to pay na ₦1,000 NAIRA\nMake e work more reach ₦1,000 first!`);
+   return;
+ }
+ if(!confirm(`You don pay ${name} - ₦${amount}?\nMove to PAID HISTORY and turn user balance to ₦0.00?`)) return;
+ try{
+ let hist=JSON.parse(localStorage.getItem('chairman_paid_history')||'[]');
+ hist.unshift({name, accName, accNo, bank, amount, date: new Date().toLocaleString()});
+ localStorage.setItem('chairman_paid_history', JSON.stringify(hist));
+ }catch(e){}
+ try{await sb.from('voices').update({is_paid:true, paid_at:new Date().toISOString()}).eq('id',id);}catch(e){await sb.from('voices').update({is_paid:true}).eq('id',id);}
+ try{
+  await sb.from('voices').update({is_paid:true}).ilike('user_name', name).eq('status','QUALIFIED');
+  await sb.from('voices').update({is_paid:true}).ilike('name', name).eq('status','QUALIFIED');
+ }catch(e){}
+ const payMsg=`✅ PAYMENT SENT: ${name} don receive ₦${amount} - Account: ${accName} ${accNo} - Balance don turn ₦0.00 - Congrats!`;
+ try{ await sb.from('announcements').insert([{message:payMsg}]); }catch(e){ localStorage.setItem('ademi_announcement', payMsg); }
+ alert(`✅ PAID! ${name} ₦${amount} - Balance don turn ₦0.00 + Announcement posted!`);load();loadAnnounce();
 }
 async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs}).eq('id',id);load();}
 async function adjust(id){const val=parseInt(document.getElementById('adj-'+id).value);if(val<=0)return alert('Put secs');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val}).eq('id',id);load();}
