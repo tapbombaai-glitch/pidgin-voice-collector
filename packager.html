@@ -1,149 +1,2225 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLECTOR - PACKAGER PRO MAX</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLECTOR STUDIO — Recorder + Packager</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 <style>
-body{font-family:sans-serif;background:#0a0a0a;color:#fff;padding:15px;max-width:600px;margin:0 auto}
-.card{background:#1a1a1a;padding:15px;border-radius:12px;margin-bottom:15px;border:1px solid #333}
-button{width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;margin-top:8px;cursor:pointer}
+*{box-sizing:border-box}
+
+body{
+  font-family:Arial,sans-serif;
+  background:#0a0a0a;
+  color:#fff;
+  padding:15px;
+  max-width:700px;
+  margin:auto;
+}
+
+.card{
+  background:#181818;
+  padding:16px;
+  border-radius:14px;
+  margin-bottom:16px;
+  border:1px solid #333;
+}
+
+h2,h3,h4{margin-top:0}
+
+button{
+  width:100%;
+  padding:13px;
+  border:0;
+  border-radius:9px;
+  font-weight:bold;
+  margin-top:8px;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
 .yellow{background:#FFC107;color:#000}
 .green{background:#00ff88;color:#000}
 .blue{background:#0088ff;color:#fff}
-input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#000;color:#fff;margin-top:5px}
-label{font-size:12px;color:#aaa;margin-top:10px;display:block}
+.red{background:#ff3344;color:#fff}
+.gray{background:#333;color:#fff}
+
+input,select,textarea{
+  width:100%;
+  padding:11px;
+  border-radius:8px;
+  border:1px solid #444;
+  background:#000;
+  color:#fff;
+  margin-top:5px;
+}
+
+textarea{
+  min-height:90px;
+  resize:vertical;
+}
+
+label{
+  font-size:12px;
+  color:#aaa;
+  display:block;
+  margin-top:11px;
+}
+
+.status{
+  margin-top:10px;
+  padding:10px;
+  border-radius:8px;
+  background:#111;
+  font-size:13px;
+}
+
+.rec-dot{
+  width:12px;
+  height:12px;
+  background:#ff1744;
+  border-radius:50%;
+  display:inline-block;
+  animation:blink 1s infinite;
+  margin-right:6px;
+}
+
+@keyframes blink{
+  0%{opacity:1}
+  50%{opacity:.2}
+  100%{opacity:1}
+}
+
+.recording-item{
+  background:#222;
+  padding:12px;
+  border-radius:10px;
+  margin-top:9px;
+}
+
+.recording-name{
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+.recording-date{
+  color:#888;
+  font-size:11px;
+  margin-bottom:7px;
+}
+
+.small-buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:5px;
+}
+
+.small-buttons button{
+  margin-top:0;
+  padding:8px;
+  font-size:11px;
+}
+
+.voice-card{
+  background:#202020;
+  padding:12px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+audio{
+  width:100%;
+  margin-top:8px;
+}
+
+hr{
+  border:0;
+  border-top:1px solid #333;
+  margin:18px 0;
+}
+
+.help{
+  color:#999;
+  font-size:12px;
+  line-height:1.5;
+}
 </style>
 </head>
+
 <body>
 
-<h2>🎧 LLECTOR PACKAGER - Sell for $150/hr</h2>
+<h2>🎙️ LLECTOR STUDIO</h2>
 
-<div class="card">
+<!-- =========================================================
+     PART 1 — RECORDER
+========================================================= -->
+
+<div class="card" style="border-color:#FFC107">
+
+<h3>🎙️ Record Nigerian Pidgin</h3>
+
+<p class="help">
+Record your voice, stop it, give the recording a name, save it,
+and keep it in your recordings list.
+</p>
+
 <label>Supabase URL</label>
-<input id="sbUrl" value="https://rupuxvpupdhlhxgjrbsh.supabase.co">
-<label>Supabase Anon Key</label>
-<input id="sbKey" value="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY">
-<label>Worker Name to Package (e.g. Adiam)</label>
-<input id="workerName" value="Adiam">
-<button class="blue" onclick="loadVoices()">1. LOAD VOICES FROM SUPABASE</button>
+<input
+  id="sbUrl"
+  value="https://rupuxvpupdhlhxgjrbsh.supabase.co"
+  placeholder="https://your-project.supabase.co"
+>
+
+<label>Supabase Publishable / Anon Key</label>
+<input
+  id="sbKey"
+  placeholder="Paste your publishable/anon key here"
+  type="password"
+>
+
+<label>Speaker / Worker Name</label>
+<input
+  id="speakerName"
+  placeholder="e.g. Adiam"
+>
+
+<label>Recording Name</label>
+<input
+  id="recName"
+  placeholder="e.g. Adiam_how_you_dey_01"
+>
+
+<div style="display:flex;gap:8px">
+
+<button
+  id="startBtn"
+  class="yellow"
+  onclick="startRecording()"
+>
+🎙️ START
+</button>
+
+<button
+  id="stopBtn"
+  class="red"
+  onclick="stopRecording()"
+  disabled
+>
+⏹️ STOP
+</button>
+
 </div>
+
+<div id="recStatus" class="status">
+Ready to record.
+</div>
+
+<div id="previewArea"></div>
+
+<button
+  id="saveBtn"
+  class="green"
+  onclick="saveRecording()"
+  style="display:none"
+>
+💾 SAVE RECORDING
+</button>
+
+<hr>
+
+<h4>📁 My Recordings</h4>
+
+<div id="myRecordings">
+<p class="help">No recordings yet.</p>
+</div>
+
+</div>
+
+
+<!-- =========================================================
+     PART 2 — SUPABASE VOICES
+========================================================= -->
+
+<div class="card" style="border-color:#0088ff">
+
+<h3>☁️ Supabase Voice Library</h3>
+
+<label>Worker Name to Load</label>
+
+<input
+  id="workerName"
+  placeholder="e.g. Adiam"
+>
+
+<button
+  class="blue"
+  onclick="loadVoices()"
+>
+1. LOAD VOICES FROM SUPABASE
+</button>
+
+<div id="voicesStatus" class="status"></div>
 
 <div id="voicesList"></div>
 
-<div class="card">
-<h3>Step 2,3,4: Package Selected</h3>
-<label>Split long audio into (seconds)</label>
-<select id="splitSec"><option value="12">12 sec clips (Best for AI)</option><option value="10">10 sec</option><option value="15">15 sec</option></select>
-<button class="yellow" onclick="packageAll()">2. CLEAN + SEGMENT + CREATE CSV + METADATA</button>
-<button class="green" onclick="downloadZip()">3. DOWNLOAD FINAL DATASET ZIP ($150/hr READY)</button>
-<div id="status" style="margin-top:10px;color:#00ff88"></div>
 </div>
 
+
+<!-- =========================================================
+     PART 3 — PACKAGER
+========================================================= -->
+
+<div class="card">
+
+<h3>📦 Dataset Packager</h3>
+
+<label>Split long audio into:</label>
+
+<select id="splitSec">
+<option value="12">12 seconds — Recommended</option>
+<option value="10">10 seconds</option>
+<option value="15">15 seconds</option>
+</select>
+
+<button
+  class="yellow"
+  onclick="packageAll()"
+>
+2. CLEAN + SEGMENT + CREATE CSV
+</button>
+
+<button
+  class="green"
+  onclick="downloadZip()"
+>
+3. DOWNLOAD FINAL ZIP
+</button>
+
+<div id="status" class="status"></div>
+
+</div>
+
+
 <script>
+
+/* =========================================================
+   GLOBALS
+========================================================= */
+
+let mediaRecorder = null;
+let mediaStream = null;
+let audioChunks = [];
+let currentBlob = null;
+let currentMimeType = "";
+let currentDuration = 0;
+
+let localRecordings = [];
+
 let VOICES = [];
 let PACKAGED = [];
 let META = [];
 
-async function loadVoices(){
- const url = document.getElementById('sbUrl').value.trim();
- const key = document.getElementById('sbKey').value.trim();
- const worker = document.getElementById('workerName').value.trim();
- document.getElementById('status').innerText = "Loading...";
- try{
-   let res = await fetch(`${url}/rest/v1/voices?select=*&name=ilike.%${worker}%`, {
-     headers:{apikey:key, Authorization:`Bearer ${key}`}
-   });
-   VOICES = await res.json();
-   if(VOICES.length===0){
-     res = await fetch(`${url}/rest/v1/voices?select=*&user_name=ilike.%${worker}%`, {
-       headers:{apikey:key, Authorization:`Bearer ${key}`}
-     });
-     VOICES = await res.json();
-   }
-   let html = "";
-   VOICES.forEach((v,i)=>{
-     html+=`<div class="card">
-     <input type="checkbox" checked id="chk_${i}"> <b>${v.name||v.user_name} - ${v.duration_seconds||0}s - ${v.status}</b><br>
-     <audio controls src="${v.audio_url}" style="width:100%;margin-top:8px"></audio>
-     <label>Transcript for this file (correct Pidgin exactly)</label>
-     <textarea id="txt_${i}" placeholder="Type exactly wetin dem talk...">${v.transcript||'How you dey, I dey come Port Harcourt tomorrow'}</textarea>
-     <label>Age</label><input id="age_${i}" value="22">
-     <label>Gender</label><select id="gen_${i}"><option>female</option><option>male</option></select>
-     </div>`;
-   });
-   document.getElementById('voicesList').innerHTML = html || `<p style='text-align:center'>No voice found for ${worker}</p>`;
-   document.getElementById('status').innerText = `Loaded ${VOICES.length} files`;
- }catch(e){ document.getElementById('status').innerText = "Error: "+e.message; }
+const LS_KEY = "llector_recordings_v2";
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+loadLocalRecordings();
+renderMyRecordings();
+
+
+/* =========================================================
+   SUPABASE HELPERS
+========================================================= */
+
+function getSupabaseConfig(){
+
+  const url =
+    document.getElementById("sbUrl").value.trim();
+
+  const key =
+    document.getElementById("sbKey").value.trim();
+
+  if(!url || !key){
+    throw new Error(
+      "Enter your Supabase URL and publishable/anon key first."
+    );
+  }
+
+  return {
+    url:url.replace(/\/$/,""),
+    key:key
+  };
 }
+
+
+function supabaseHeaders(key, extra={}){
+
+  return {
+    apikey:key,
+    Authorization:"Bearer "+key,
+    ...extra
+  };
+
+}
+
+
+/* =========================================================
+   LOCAL RECORDINGS
+========================================================= */
+
+function loadLocalRecordings(){
+
+  try{
+
+    localRecordings =
+      JSON.parse(
+        localStorage.getItem(LS_KEY) || "[]"
+      );
+
+  }catch(error){
+
+    console.log(error);
+
+    localRecordings = [];
+
+  }
+
+}
+
+
+function saveLocalRecordings(){
+
+  /*
+   We keep local metadata only.
+
+   The actual audio is uploaded to Supabase.
+   This avoids filling localStorage with huge audio files.
+  */
+
+  const safeData =
+    localRecordings.map(item => ({
+      id:item.id,
+      name:item.name,
+      speaker:item.speaker,
+      duration:item.duration,
+      created:item.created,
+      audio_url:item.audio_url || "",
+      storage_path:item.storage_path || "",
+      status:item.status || "local"
+    }));
+
+  localStorage.setItem(
+    LS_KEY,
+    JSON.stringify(safeData)
+  );
+
+}
+
+
+/* =========================================================
+   RECORDING FORMAT
+========================================================= */
+
+function getSupportedMimeType(){
+
+  const types = [
+
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4"
+
+  ];
+
+  for(const type of types){
+
+    if(
+      window.MediaRecorder &&
+      MediaRecorder.isTypeSupported(type)
+    ){
+
+      return type;
+
+    }
+
+  }
+
+  return "";
+
+}
+
+
+/* =========================================================
+   START RECORDING
+========================================================= */
+
+async function startRecording(){
+
+  try{
+
+    if(!navigator.mediaDevices ||
+       !navigator.mediaDevices.getUserMedia){
+
+      throw new Error(
+        "Your browser does not support microphone recording."
+      );
+
+    }
+
+    mediaStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:{
+          channelCount:1,
+          echoCancellation:true,
+          noiseSuppression:true,
+          autoGainControl:true
+        }
+      });
+
+    const mime =
+      getSupportedMimeType();
+
+    mediaRecorder =
+      mime
+      ? new MediaRecorder(
+          mediaStream,
+          {mimeType:mime}
+        )
+      : new MediaRecorder(mediaStream);
+
+    currentMimeType =
+      mediaRecorder.mimeType || mime || "audio/webm";
+
+    audioChunks = [];
+    currentBlob = null;
+    currentDuration = 0;
+
+    const startedAt =
+      Date.now();
+
+    mediaRecorder.ondataavailable =
+      function(event){
+
+        if(event.data && event.data.size > 0){
+
+          audioChunks.push(event.data);
+
+        }
+
+      };
+
+
+    mediaRecorder.onstop =
+      function(){
+
+        currentDuration =
+          (Date.now() - startedAt) / 1000;
+
+        currentBlob =
+          new Blob(
+            audioChunks,
+            {
+              type:currentMimeType
+            }
+          );
+
+        const previewURL =
+          URL.createObjectURL(currentBlob);
+
+        document.getElementById(
+          "previewArea"
+        ).innerHTML = `
+          <audio
+            controls
+            src="${previewURL}"
+          ></audio>
+
+          <div class="status">
+            ✅ Recording ready<br>
+            Duration: ${formatDuration(currentDuration)}<br>
+            Size: ${formatBytes(currentBlob.size)}
+          </div>
+        `;
+
+        document.getElementById(
+          "saveBtn"
+        ).style.display = "block";
+
+        document.getElementById(
+          "recStatus"
+        ).innerHTML =
+          "✅ Recording stopped. Preview it, then save.";
+
+        if(mediaStream){
+
+          mediaStream
+            .getTracks()
+            .forEach(track => track.stop());
+
+          mediaStream = null;
+
+        }
+
+      };
+
+
+    mediaRecorder.start(250);
+
+    document.getElementById(
+      "startBtn"
+    ).disabled = true;
+
+    document.getElementById(
+      "stopBtn"
+    ).disabled = false;
+
+    document.getElementById(
+      "saveBtn"
+    ).style.display = "none";
+
+    document.getElementById(
+      "recStatus"
+    ).innerHTML =
+      `<span class="rec-dot"></span> Recording... Talk your Pidgin now!`;
+
+  }catch(error){
+
+    console.error(error);
+
+    document.getElementById(
+      "recStatus"
+    ).innerText =
+      "❌ "+error.message;
+
+  }
+
+}
+
+
+/* =========================================================
+   STOP RECORDING
+========================================================= */
+
+function stopRecording(){
+
+  if(
+    mediaRecorder &&
+    mediaRecorder.state !== "inactive"
+  ){
+
+    mediaRecorder.stop();
+
+  }
+
+  document.getElementById(
+    "startBtn"
+  ).disabled = false;
+
+  document.getElementById(
+    "stopBtn"
+  ).disabled = true;
+
+}
+
+
+/* =========================================================
+   SAVE RECORDING
+========================================================= */
+
+async function saveRecording(){
+
+  if(!currentBlob){
+
+    alert("Record something first.");
+
+    return;
+
+  }
+
+  let name =
+    document
+      .getElementById("recName")
+      .value
+      .trim();
+
+  const speaker =
+    document
+      .getElementById("speakerName")
+      .value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g,"_");
+
+  if(!name){
+
+    name =
+      `recording_${Date.now()}`;
+
+  }
+
+  name =
+    name.replace(
+      /[^a-zA-Z0-9_-]/g,
+      "_"
+    );
+
+  const safeSpeaker =
+    speaker || "worker";
+
+  const id =
+    Date.now();
+
+  const extension =
+    getFileExtension(currentMimeType);
+
+  const fileName =
+    `${name}_${id}.${extension}`;
+
+  const storagePath =
+    `${safeSpeaker}/${fileName}`;
+
+
+  document.getElementById(
+    "recStatus"
+  ).innerText =
+    "⏳ Saving recording...";
+
+
+  /*
+   Save local metadata immediately.
+  */
+
+  const localItem = {
+
+    id:id,
+
+    name:name,
+
+    speaker:safeSpeaker,
+
+    duration:currentDuration,
+
+    created:new Date().toISOString(),
+
+    audio_url:"",
+
+    storage_path:storagePath,
+
+    status:"saving"
+
+  };
+
+  localRecordings.unshift(localItem);
+
+  saveLocalRecordings();
+
+  renderMyRecordings();
+
+
+  /*
+   Try Supabase upload.
+  */
+
+  try{
+
+    const config =
+      getSupabaseConfig();
+
+    const uploadURL =
+      `${config.url}/storage/v1/object/voices/${encodeURIComponent(storagePath)}`;
+
+
+    const uploadResponse =
+      await fetch(
+        uploadURL,
+        {
+          method:"POST",
+
+          headers:supabaseHeaders(
+            config.key,
+            {
+              "Content-Type":
+                currentMimeType,
+
+              "x-upsert":
+                "true"
+            }
+          ),
+
+          body:currentBlob
+        }
+      );
+
+
+    if(!uploadResponse.ok){
+
+      const errorText =
+        await uploadResponse.text();
+
+      throw new Error(
+        "Supabase upload failed: "+
+        errorText
+      );
+
+    }
+
+
+    /*
+     Public URL.
+     This requires the voices bucket
+     to be PUBLIC.
+    */
+
+    const publicURL =
+      `${config.url}/storage/v1/object/public/voices/${storagePath}`;
+
+
+    localItem.audio_url =
+      publicURL;
+
+    localItem.status =
+      "cloud";
+
+
+    /*
+     Insert record into voices table.
+    */
+
+    const voiceRecord = {
+
+      name:name,
+
+      user_name:safeSpeaker,
+
+      audio_url:publicURL,
+
+      duration_seconds:
+        Number(
+          currentDuration.toFixed(2)
+        ),
+
+      transcript:"",
+
+      status:"UNCHECKED"
+
+    };
+
+
+    const databaseResponse =
+      await fetch(
+        `${config.url}/rest/v1/voices`,
+        {
+          method:"POST",
+
+          headers:supabaseHeaders(
+            config.key,
+            {
+              "Content-Type":
+                "application/json",
+
+              "Prefer":
+                "return=minimal"
+            }
+          ),
+
+          body:JSON.stringify(
+            voiceRecord
+          )
+        }
+      );
+
+
+    if(!databaseResponse.ok){
+
+      const databaseError =
+        await databaseResponse.text();
+
+      /*
+       Upload succeeded even if
+       database insert failed.
+      */
+
+      console.error(
+        "Database insert failed:",
+        databaseError
+      );
+
+      localItem.status =
+        "cloud-uploaded-db-failed";
+
+      document.getElementById(
+        "recStatus"
+      ).innerText =
+        "☁️ Audio uploaded, but database record failed. Check your RLS/table columns.";
+
+    }else{
+
+      document.getElementById(
+        "recStatus"
+      ).innerText =
+        "✅ Saved to Supabase successfully!";
+
+    }
+
+
+  }catch(error){
+
+    console.error(error);
+
+    localItem.status =
+      "local-only";
+
+    document.getElementById(
+      "recStatus"
+    ).innerText =
+      "⚠️ Saved on this browser only. Cloud save failed: "+
+      error.message;
+
+  }
+
+
+  saveLocalRecordings();
+
+  renderMyRecordings();
+
+  document.getElementById(
+    "saveBtn"
+  ).style.display =
+    "none";
+
+  currentBlob = null;
+
+}
+
+
+/* =========================================================
+   RECORDING LIST
+========================================================= */
+
+function renderMyRecordings(){
+
+  const box =
+    document.getElementById(
+      "myRecordings"
+    );
+
+  if(localRecordings.length === 0){
+
+    box.innerHTML =
+      `<p class="help">No recordings yet.</p>`;
+
+    return;
+
+  }
+
+
+  box.innerHTML =
+    localRecordings.map(
+      (r,index) => {
+
+        const audio =
+          r.audio_url
+          ? `
+            <audio
+              controls
+              src="${escapeHTML(r.audio_url)}"
+            ></audio>
+          `
+          : `
+            <div class="status">
+              Audio is local-only.
+              Save/download the recording before clearing browser data.
+            </div>
+          `;
+
+
+        return `
+
+        <div class="recording-item">
+
+          <div class="recording-name">
+            🎙️ ${escapeHTML(r.name)}
+          </div>
+
+          <div class="recording-date">
+
+            Speaker:
+            ${escapeHTML(r.speaker || "worker")}
+            <br>
+
+            Duration:
+            ${formatDuration(r.duration)}
+            <br>
+
+            ${new Date(r.created).toLocaleString()}
+            <br>
+
+            Status:
+            ${escapeHTML(r.status || "local")}
+
+          </div>
+
+          ${audio}
+
+          <div class="small-buttons">
+
+            <button
+              class="gray"
+              onclick="renameRecording(${index})"
+            >
+              ✏️ Rename
+            </button>
+
+            <button
+              class="red"
+              onclick="deleteRecording(${index})"
+            >
+              🗑️ Delete
+            </button>
+
+            <button
+              class="blue"
+              onclick="downloadRecording(${index})"
+            >
+              ⬇️ Download
+            </button>
+
+          </div>
+
+        </div>
+
+        `;
+
+      }
+    ).join("");
+
+}
+
+
+/* =========================================================
+   RENAME
+========================================================= */
+
+async function renameRecording(index){
+
+  const item =
+    localRecordings[index];
+
+  if(!item) return;
+
+
+  const newName =
+    prompt(
+      "Enter new recording name:",
+      item.name
+    );
+
+
+  if(!newName) return;
+
+
+  const cleanName =
+    newName
+      .trim()
+      .replace(
+        /[^a-zA-Z0-9_-]/g,
+        "_"
+      );
+
+
+  if(!cleanName) return;
+
+
+  /*
+   Rename local record.
+  */
+
+  item.name =
+    cleanName;
+
+
+  /*
+   NOTE:
+   Changing the database/storage filename
+   requires a Storage move operation.
+   The local name is changed immediately.
+  */
+
+  saveLocalRecordings();
+
+  renderMyRecordings();
+
+
+  /*
+   Update database record by matching
+   audio_url.
+  */
+
+  try{
+
+    const config =
+      getSupabaseConfig();
+
+    if(item.audio_url){
+
+      await fetch(
+        `${config.url}/rest/v1/voices?audio_url=eq.${encodeURIComponent(item.audio_url)}`,
+        {
+          method:"PATCH",
+
+          headers:supabaseHeaders(
+            config.key,
+            {
+              "Content-Type":
+                "application/json"
+            }
+          ),
+
+          body:JSON.stringify({
+            name:cleanName
+          })
+        }
+      );
+
+    }
+
+  }catch(error){
+
+    console.log(
+      "Cloud rename update failed:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+async function deleteRecording(index){
+
+  const item =
+    localRecordings[index];
+
+  if(!item) return;
+
+
+  if(
+    !confirm(
+      `Delete "${item.name}"?`
+    )
+  ){
+
+    return;
+
+  }
+
+
+  try{
+
+    const config =
+      getSupabaseConfig();
+
+
+    /*
+     Delete Storage file.
+    */
+
+    if(item.storage_path){
+
+      await fetch(
+        `${config.url}/storage/v1/object/voices`,
+        {
+          method:"DELETE",
+
+          headers:supabaseHeaders(
+            config.key,
+            {
+              "Content-Type":
+                "application/json"
+            }
+          ),
+
+          body:JSON.stringify({
+            prefixes:[
+              item.storage_path
+            ]
+          })
+        }
+      );
+
+    }
+
+
+    /*
+     Delete database record.
+    */
+
+    if(item.audio_url){
+
+      await fetch(
+        `${config.url}/rest/v1/voices?audio_url=eq.${encodeURIComponent(item.audio_url)}`,
+        {
+          method:"DELETE",
+          headers:supabaseHeaders(
+            config.key
+          )
+        }
+      );
+
+    }
+
+  }catch(error){
+
+    console.log(
+      "Cloud delete failed:",
+      error
+    );
+
+  }
+
+
+  localRecordings.splice(
+    index,
+    1
+  );
+
+  saveLocalRecordings();
+
+  renderMyRecordings();
+
+}
+
+
+/* =========================================================
+   DOWNLOAD ONE
+========================================================= */
+
+async function downloadRecording(index){
+
+  const item =
+    localRecordings[index];
+
+  if(!item) return;
+
+
+  if(item.audio_url){
+
+    const a =
+      document.createElement("a");
+
+    a.href =
+      item.audio_url;
+
+    a.download =
+      item.name +
+      "." +
+      getFileExtension(
+        currentMimeType || "audio/webm"
+      );
+
+    a.target="_blank";
+
+    a.click();
+
+    return;
+
+  }
+
+
+  alert(
+    "This recording has no cloud URL."
+  );
+
+}
+
+
+/* =========================================================
+   LOAD VOICES FROM SUPABASE
+========================================================= */
+
+async function loadVoices(){
+
+  const config =
+    getSupabaseConfig();
+
+  const worker =
+    document
+      .getElementById("workerName")
+      .value
+      .trim();
+
+
+  if(!worker){
+
+    alert(
+      "Enter a worker name."
+    );
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "voicesStatus"
+  ).innerText =
+    "⏳ Loading voices...";
+
+
+  try{
+
+    let response =
+      await fetch(
+        `${config.url}/rest/v1/voices?select=*&name=ilike.*${encodeURIComponent(worker)}*`,
+        {
+          headers:
+            supabaseHeaders(
+              config.key
+            )
+        }
+      );
+
+
+    if(!response.ok){
+
+      throw new Error(
+        await response.text()
+      );
+
+    }
+
+
+    VOICES =
+      await response.json();
+
+
+    if(
+      !Array.isArray(VOICES)
+    ){
+
+      throw new Error(
+        "Supabase returned an invalid response."
+      );
+
+    }
+
+
+    /*
+     If no results by name,
+     search user_name.
+    */
+
+    if(
+      VOICES.length === 0
+    ){
+
+      response =
+        await fetch(
+          `${config.url}/rest/v1/voices?select=*&user_name=ilike.*${encodeURIComponent(worker)}*`,
+          {
+            headers:
+              supabaseHeaders(
+                config.key
+              )
+          }
+        );
+
+      VOICES =
+        await response.json();
+
+    }
+
+
+    renderVoices();
+
+
+    document.getElementById(
+      "voicesStatus"
+    ).innerText =
+      `✅ Loaded ${VOICES.length} voice(s).`;
+
+
+  }catch(error){
+
+    console.error(error);
+
+    document.getElementById(
+      "voicesStatus"
+    ).innerText =
+      "❌ "+error.message;
+
+  }
+
+}
+
+
+/* =========================================================
+   RENDER SUPABASE VOICES
+========================================================= */
+
+function renderVoices(){
+
+  const box =
+    document.getElementById(
+      "voicesList"
+    );
+
+
+  if(VOICES.length === 0){
+
+    box.innerHTML =
+      `<p class="help">No voice found.</p>`;
+
+    return;
+
+  }
+
+
+  box.innerHTML =
+    VOICES.map(
+      (v,i) => `
+
+      <div class="voice-card">
+
+        <label>
+
+          <input
+            type="checkbox"
+            checked
+            id="chk_${i}"
+          >
+
+          Select this voice
+
+        </label>
+
+        <b>
+          ${escapeHTML(
+            v.name ||
+            v.user_name ||
+            "Voice"
+          )}
+        </b>
+
+        <div class="help">
+
+          Duration:
+          ${v.duration_seconds || 0}s
+
+          <br>
+
+          Status:
+          ${escapeHTML(
+            v.status || ""
+          )}
+
+        </div>
+
+        <audio
+          controls
+          src="${escapeHTML(
+            v.audio_url || ""
+          )}"
+        ></audio>
+
+        <label>
+          Transcript
+        </label>
+
+        <textarea
+          id="txt_${i}"
+          placeholder="Type exactly wetin dem talk..."
+        >${escapeHTML(
+          v.transcript || ""
+        )}</textarea>
+
+        <label>
+          Age
+        </label>
+
+        <input
+          id="age_${i}"
+          value="22"
+        >
+
+        <label>
+          Gender
+        </label>
+
+        <select id="gen_${i}">
+          <option value="female">
+            female
+          </option>
+
+          <option value="male">
+            male
+          </option>
+        </select>
+
+      </div>
+
+      `
+    ).join("");
+
+}
+
+
+/* =========================================================
+   PACKAGE AUDIO
+========================================================= */
 
 async function packageAll(){
- PACKAGED=[]; META=[];
- document.getElementById('status').innerText = "Packaging... no close browser, fit take 1-2 mins!";
- const split = parseInt(document.getElementById('splitSec').value);
- for(let i=0;i<VOICES.length;i++){
-   if(!document.getElementById(`chk_${i}`)?.checked) continue;
-   const v = VOICES[i];
-   const fullText = document.getElementById(`txt_${i}`).value.trim() || v.transcript || "How you dey";
-   try{
-     const audioBlob = await fetch(v.audio_url).then(r=>r.blob());
-     const audioCtx = new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000});
-     const arrayBuffer = await audioBlob.arrayBuffer();
-     const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-     const duration = decoded.duration;
-     const numChunks = Math.ceil(duration / split);
-     for(let c=0;c<numChunks;c++){
-       const start = c*split;
-       const end = Math.min((c+1)*split, duration);
-       const chunkDuration = end-start;
-       if(chunkDuration < 0.5) continue;
-       const chunkBuffer = audioCtx.createBuffer(1, Math.floor(chunkDuration*16000), 16000);
-       const startSample = Math.floor(start * decoded.sampleRate);
-       const endSample = Math.floor(end * decoded.sampleRate);
-       const sliced = decoded.getChannelData(0).slice(startSample, endSample);
-       const ratio = decoded.sampleRate / 16000;
-       for(let j=0;j<chunkBuffer.length;j++){ chunkBuffer.getChannelData(0)[j] = sliced[Math.floor(j*ratio)] || 0; }
-       const wavBlob = bufferToWav(chunkBuffer);
-       const workerName = (v.name||v.user_name||'worker').replace(/\s+/g,'_');
-       const fileName = `${workerName}_${String(i).padStart(3,'0')}_${String(c).padStart(3,'0')}.wav`;
-       const sentences = fullText.split(/[.!?]+/).filter(s=>s.trim());
-       const textChunk = sentences[c] || sentences[0] || fullText;
-       PACKAGED.push({fileName, blob:wavBlob, text: textChunk.trim()});
-       META.push({file_name:fileName, speaker_id:`${workerName}_PH_01`, duration: chunkDuration.toFixed(2), text: textChunk.trim(), age: document.getElementById(`age_${i}`).value, gender: document.getElementById(`gen_${i}`).value, language:"Nigerian Pidgin", accent:"Port Harcourt", environment:"quiet indoor", sample_rate:16000, status:v.status});
-     }
-     await audioCtx.close();
-   }catch(e){ console.log(e); }
- }
- document.getElementById('status').innerText = `Packaged! ${PACKAGED.length} WAV files ready. Now click DOWNLOAD ZIP`;
+
+  if(VOICES.length === 0){
+
+    alert(
+      "Load voices first."
+    );
+
+    return;
+
+  }
+
+
+  PACKAGED = [];
+  META = [];
+
+
+  document.getElementById(
+    "status"
+  ).innerText =
+    "⏳ Packaging... Please keep this page open.";
+
+
+  const split =
+    parseInt(
+      document.getElementById(
+        "splitSec"
+      ).value
+    );
+
+
+  for(
+    let i=0;
+    i<VOICES.length;
+    i++
+  ){
+
+    const checkbox =
+      document.getElementById(
+        `chk_${i}`
+      );
+
+
+    if(
+      !checkbox ||
+      !checkbox.checked
+    ){
+
+      continue;
+
+    }
+
+
+    const v =
+      VOICES[i];
+
+
+    try{
+
+      const transcript =
+        document
+          .getElementById(
+            `txt_${i}`
+          )
+          .value
+          .trim();
+
+
+      if(!v.audio_url){
+
+        console.log(
+          "Missing audio URL:",
+          v
+        );
+
+        continue;
+
+      }
+
+
+      const response =
+        await fetch(
+          v.audio_url
+        );
+
+
+      if(!response.ok){
+
+        throw new Error(
+          "Could not download audio."
+        );
+
+      }
+
+
+      const audioBlob =
+        await response.blob();
+
+
+      const arrayBuffer =
+        await audioBlob.arrayBuffer();
+
+
+      const AudioContextClass =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+
+      const audioContext =
+        new AudioContextClass();
+
+
+      const decoded =
+        await audioContext.decodeAudioData(
+          arrayBuffer
+        );
+
+
+      const duration =
+        decoded.duration;
+
+
+      const sampleRate =
+        decoded.sampleRate;
+
+
+      const numberOfChunks =
+        Math.ceil(
+          duration / split
+        );
+
+
+      for(
+        let c=0;
+        c<numberOfChunks;
+        c++
+      ){
+
+        const start =
+          c * split;
+
+        const end =
+          Math.min(
+            (c+1)*split,
+            duration
+          );
+
+        const chunkDuration =
+          end-start;
+
+
+        if(
+          chunkDuration < 0.5
+        ){
+
+          continue;
+
+        }
+
+
+        const startSample =
+          Math.floor(
+            start * sampleRate
+          );
+
+        const endSample =
+          Math.floor(
+            end * sampleRate
+          );
+
+
+        const source =
+          decoded.getChannelData(0);
+
+
+        const sliced =
+          source.slice(
+            startSample,
+            endSample
+          );
+
+
+        /*
+         Simple resampling to 16 kHz.
+        */
+
+        const targetLength =
+          Math.floor(
+            chunkDuration * 16000
+          );
+
+
+        const target =
+          new Float32Array(
+            targetLength
+          );
+
+
+        const ratio =
+          sliced.length /
+          target.length;
+
+
+        for(
+          let j=0;
+          j<target.length;
+          j++
+        ){
+
+          target[j] =
+            sliced[
+              Math.min(
+                sliced.length-1,
+                Math.floor(
+                  j*ratio
+                )
+              )
+            ] || 0;
+
+        }
+
+
+        const wavBlob =
+          float32ToWav(
+            target,
+            16000
+          );
+
+
+        const workerName =
+          (
+            v.name ||
+            v.user_name ||
+            "worker"
+          )
+          .replace(
+            /\s+/g,
+            "_"
+          );
+
+
+        const fileName =
+          `${workerName}_${String(i).padStart(3,"0")}_${String(c).padStart(3,"0")}.wav`;
+
+
+        PACKAGED.push({
+
+          fileName:fileName,
+
+          blob:wavBlob,
+
+          text:
+            transcript ||
+            "How you dey"
+
+        });
+
+
+        META.push({
+
+          file_name:fileName,
+
+          speaker_id:
+            `${workerName}_PH_01`,
+
+          duration:
+            chunkDuration.toFixed(2),
+
+          text:
+            transcript ||
+            "How you dey",
+
+          age:
+            document.getElementById(
+              `age_${i}`
+            ).value,
+
+          gender:
+            document.getElementById(
+              `gen_${i}`
+            ).value,
+
+          language:
+            "Nigerian Pidgin",
+
+          accent:
+            "Port Harcourt",
+
+          environment:
+            "quiet indoor",
+
+          sample_rate:
+            16000,
+
+          status:
+            v.status || ""
+
+        });
+
+      }
+
+
+      await audioContext.close();
+
+
+    }catch(error){
+
+      console.error(
+        "Packaging error:",
+        error
+      );
+
+    }
+
+  }
+
+
+  document.getElementById(
+    "status"
+  ).innerText =
+    `✅ Packaged ${PACKAGED.length} WAV files.`;
+
 }
 
-function bufferToWav(buffer){
- const numChannels=1; const sampleRate=16000; const format=1; const bitDepth=16;
- const dataLength = buffer.length * 2; const headerLength=44;
- const arrayBuffer = new ArrayBuffer(headerLength+dataLength);
- const view = new DataView(arrayBuffer);
- writeString(view,0,'RIFF'); view.setUint32(4,36+dataLength,true); writeString(view,8,'WAVE');
- writeString(view,12,'fmt '); view.setUint32(16,16,true); view.setUint16(20,format,true); view.setUint16(22,numChannels,true);
- view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*numChannels*2,true); view.setUint16(32,numChannels*2,true); view.setUint16(34,bitDepth,true);
- writeString(view,36,'data'); view.setUint32(40,dataLength,true);
- const channelData = buffer.getChannelData(0); let offset=44;
- for(let i=0;i<channelData.length;i++,offset+=2){ const s=Math.max(-1,Math.min(1,channelData[i])); view.setInt16(offset,s<0?s*0x8000:s*0x7FFF,true); }
- return new Blob([view],{type:'audio/wav'});
+
+/* =========================================================
+   FLOAT32 → WAV
+========================================================= */
+
+function float32ToWav(
+  samples,
+  sampleRate
+){
+
+  const dataLength =
+    samples.length * 2;
+
+  const buffer =
+    new ArrayBuffer(
+      44 + dataLength
+    );
+
+  const view =
+    new DataView(buffer);
+
+
+  writeString(
+    view,
+    0,
+    "RIFF"
+  );
+
+  view.setUint32(
+    4,
+    36 + dataLength,
+    true
+  );
+
+  writeString(
+    view,
+    8,
+    "WAVE"
+  );
+
+  writeString(
+    view,
+    12,
+    "fmt "
+  );
+
+  view.setUint32(
+    16,
+    16,
+    true
+  );
+
+  view.setUint16(
+    20,
+    1,
+    true
+  );
+
+  view.setUint16(
+    22,
+    1,
+    true
+  );
+
+  view.setUint32(
+    24,
+    sampleRate,
+    true
+  );
+
+  view.setUint32(
+    28,
+    sampleRate * 2,
+    true
+  );
+
+  view.setUint16(
+    32,
+    2,
+    true
+  );
+
+  view.setUint16(
+    34,
+    16,
+    true
+  );
+
+  writeString(
+    view,
+    36,
+    "data"
+  );
+
+  view.setUint32(
+    40,
+    dataLength,
+    true
+  );
+
+
+  let offset = 44;
+
+
+  for(
+    let i=0;
+    i<samples.length;
+    i++
+  ){
+
+    const sample =
+      Math.max(
+        -1,
+        Math.min(
+          1,
+          samples[i]
+        )
+      );
+
+
+    const value =
+      sample < 0
+      ? sample * 0x8000
+      : sample * 0x7FFF;
+
+
+    view.setInt16(
+      offset,
+      value,
+      true
+    );
+
+
+    offset += 2;
+
+  }
+
+
+  return new Blob(
+    [buffer],
+    {type:"audio/wav"}
+  );
+
 }
-function writeString(view,offset,string){for(let i=0;i<string.length;i++) view.setUint8(offset+i,string.charCodeAt(i))}
+
+
+function writeString(
+  view,
+  offset,
+  text
+){
+
+  for(
+    let i=0;
+    i<text.length;
+    i++
+  ){
+
+    view.setUint8(
+      offset+i,
+      text.charCodeAt(i)
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   DOWNLOAD ZIP
+========================================================= */
+
 async function downloadZip(){
- if(PACKAGED.length===0){ alert("Package first!"); return; }
- const zip = new JSZip(); const audios = zip.folder("audios");
- PACKAGED.forEach(p=>audios.file(p.fileName,p.blob));
- let csv = "audio_file,text\n"; PACKAGED.forEach(p=>{csv+=`${p.fileName},"${p.text.replace(/"/g,'""')}"\n`});
- zip.file("transcripts.csv",csv); zip.file("metadata.json",JSON.stringify(META,null,2));
- const totalHours = (META.reduce((a,m)=>a+parseFloat(m.duration),0)/3600).toFixed(2);
- zip.file("README.md",`# Nigerian Pidgin Dataset - Packaged by LLECTOR\nHours: ${totalHours}\nLanguage: Nigerian Pidgin (Port Harcourt)\nFormat: WAV 16kHz Mono\nTotal Files: ${PACKAGED.length}\nReady to sell $80-$200/hour\n`);
- const blob = await zip.generateAsync({type:"blob"}); saveAs(blob, `LLECTOR_Pidgin_${totalHours}h_${new Date().toISOString().slice(0,10)}.zip`);
- document.getElementById('status').innerText = `ZIP DOWNLOADED! ${totalHours}h = $${(parseFloat(totalHours)*150).toFixed(0)} value!`;
+
+  if(
+    PACKAGED.length === 0
+  ){
+
+    alert(
+      "Package the voices first."
+    );
+
+    return;
+
+  }
+
+
+  const zip =
+    new JSZip();
+
+
+  const audios =
+    zip.folder("audios");
+
+
+  PACKAGED.forEach(
+    p => {
+
+      audios.file(
+        p.fileName,
+        p.blob
+      );
+
+    }
+  );
+
+
+  let csv =
+    "audio_file,text\n";
+
+
+  PACKAGED.forEach(
+    p => {
+
+      csv +=
+        `${csvEscape(p.fileName)},${csvEscape(p.text)}\n`;
+
+    }
+  );
+
+
+  zip.file(
+    "transcripts.csv",
+    csv
+  );
+
+
+  zip.file(
+    "metadata.json",
+    JSON.stringify(
+      META,
+      null,
+      2
+    )
+  );
+
+
+  const totalSeconds =
+    META.reduce(
+      (total,item) =>
+        total +
+        Number(item.duration || 0),
+      0
+    );
+
+
+  const totalHours =
+    (
+      totalSeconds / 3600
+    ).toFixed(2);
+
+
+  zip.file(
+    "README.md",
+`# Nigerian Pidgin Dataset
+
+Language: Nigerian Pidgin
+Accent: Port Harcourt
+Format: WAV 16 kHz Mono
+Total Files: ${PACKAGED.length}
+Total Hours: ${totalHours}
+
+Generated by LLECTOR Studio.
+`
+  );
+
+
+  document.getElementById(
+    "status"
+  ).innerText =
+    "⏳ Creating ZIP...";
+
+
+  const blob =
+    await zip.generateAsync({
+      type:"blob"
+    });
+
+
+  saveAs(
+    blob,
+    `LLECTOR_Pidgin_${totalHours}h_${new Date().toISOString().slice(0,10)}.zip`
+  );
+
+
+  document.getElementById(
+    "status"
+  ).innerText =
+    `✅ ZIP downloaded — ${PACKAGED.length} files / ${totalHours} hours.`;
+
 }
+
+
+/* =========================================================
+   UTILITIES
+========================================================= */
+
+function getFileExtension(
+  mime
+){
+
+  if(
+    mime.includes("ogg")
+  ){
+
+    return "ogg";
+
+  }
+
+  if(
+    mime.includes("mp4")
+  ){
+
+    return "m4a";
+
+  }
+
+  return "webm";
+
+}
+
+
+function formatDuration(
+  seconds
+){
+
+  seconds =
+    Number(seconds) || 0;
+
+  const mins =
+    Math.floor(
+      seconds / 60
+    );
+
+  const secs =
+    Math.floor(
+      seconds % 60
+    );
+
+  return (
+    String(mins).padStart(2,"0") +
+    ":" +
+    String(secs).padStart(2,"0")
+  );
+
+}
+
+
+function formatBytes(
+  bytes
+){
+
+  if(bytes < 1024)
+    return bytes+" B";
+
+  if(bytes < 1024*1024)
+    return (
+      (bytes/1024).toFixed(1)+
+      " KB"
+    );
+
+  return (
+    (bytes/(1024*1024)).toFixed(2)+
+    " MB"
+  );
+
+}
+
+
+function csvEscape(
+  value
+){
+
+  const text =
+    String(value ?? "");
+
+  return `"${text.replace(
+    /"/g,
+    '""'
+  )}"`;
+
+}
+
+
+function escapeHTML(
+  value
+){
+
+  return String(
+    value ?? ""
+  )
+  .replace(
+    /&/g,
+    "&amp;"
+  )
+  .replace(
+    /</g,
+    "&lt;"
+  )
+  .replace(
+    />/g,
+    "&gt;"
+  )
+  .replace(
+    /"/g,
+    "&quot;"
+  )
+  .replace(
+    /'/g,
+    "&#039;"
+  );
+
+}
+
 </script>
+
 </body>
 </html>
