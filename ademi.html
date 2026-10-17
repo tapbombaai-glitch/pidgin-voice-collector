@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chairman Admin - Ademi DELETE</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui;background:#0f0c29;color:#fff;padding:12px;max-width:520px;margin:auto}
@@ -20,6 +21,7 @@ textarea{width:100%;padding:10px;border-radius:8px;background:rgba(0,0,0,0.4);co
 input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid #555;font-size:13px}
 .middleBox{display:none;background:rgba(0,0,0,0.45);border:2px dashed #f1c40f;border-radius:10px;padding:10px;margin-top:10px}
 .acctBox{background:#000;border:2px solid #2ed573;border-radius:10px;padding:10px;margin:8px 0}
+.online-row{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.4);padding:10px;border-radius:10px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -33,6 +35,25 @@ input{padding:6px;border-radius:6px;background:#000;color:#fff;border:1px solid 
 <button class="btn btn-red" onclick="filter='REJECTED';load()">Bad</button>
 <button class="btn btn-blue" onclick="filter='PAID';load()">PAID ✅</button>
 </div>
+</div>
+
+<!-- NEW: CHAIRMAN LIVE CALL + ONLINE -->
+<div class="card" style="border:2px solid #2ed573;background:rgba(46,213,115,0.12)">
+<div style="font-weight:900;color:#2ed573">📞 CHAIRMAN LIVE CALL</div>
+<div style="font-size:11px;margin-top:4px">Your Chairman ID:</div>
+<div id="chairPeerId" style="font-size:12px;font-weight:900;color:#f1c40f;background:#000;padding:6px;border-radius:6px;word-break:break-all;margin:4px 0">Loading...</div>
+<div style="display:flex;gap:6px">
+<button class="btn btn-green" style="flex:1" onclick="copyChairId()">📋 Copy ID</button>
+<button class="btn btn-red" id="endCallBtn" style="flex:1;display:none" onclick="endCall()">⏹️ End Call</button>
+</div>
+<div id="callStatus" style="font-size:11px;margin-top:6px">Ready to call workers</div>
+<audio id="remoteAudio" autoplay playsinline></audio>
+</div>
+
+<div class="card" style="border:2px solid #f1c40f">
+<div style="font-weight:800;color:#f1c40f">🟢 Workers Online Now - Click to Call</div>
+<div id="onlineList" style="font-size:12px;margin-top:6px">Loading...</div>
+<button class="btn btn-yellow" style="width:100%;margin-top:8px" onclick="loadOnline()">🔄 Refresh</button>
 </div>
 
 <div class="card" style="border:2px solid #f1c40f;background:rgba(241,196,15,0.15)">
@@ -54,6 +75,70 @@ const SUPA_KEY="sb_publishable_DQ27GSl6cVVYy8s5U4ZsFA_ye9e-hpY";
 const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 const RATE=500/5400;
 let filter='UNCHECKED';
+let peerObj=null, activeCall=null;
+
+// --- CHAIRMAN CALL LOGIC ---
+function initChairPeer(){
+ const peerId = 'chairman_'+Math.floor(Math.random()*10000);
+ peerObj = new Peer(peerId);
+ peerObj.on('open', id=>{
+   document.getElementById('chairPeerId').innerText=id;
+   document.getElementById('callStatus').innerText='✅ Ready - Workers can call you';
+   setTimeout(loadOnline,1000);
+ });
+ peerObj.on('call', async call=>{
+   document.getElementById('callStatus').innerText='📞 Incoming call from worker...';
+   const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+   call.answer(stream);
+   call.on('stream', remoteStream=>{
+     document.getElementById('remoteAudio').srcObject=remoteStream;
+     document.getElementById('callStatus').innerText='🔊 CONNECTED to worker!';
+     document.getElementById('endCallBtn').style.display='block';
+   });
+   activeCall=call;
+ });
+}
+async function callWorker(peerId, name){
+ if(!peerId){alert('No peer ID for '+name);return;}
+ document.getElementById('callStatus').innerText='⏳ Calling '+name+'...';
+ try{
+   const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+   const call = peerObj.call(peerId, stream);
+   call.on('stream', remoteStream=>{
+     document.getElementById('remoteAudio').srcObject=remoteStream;
+     document.getElementById('callStatus').innerText='🔊 CONNECTED to '+name+'!';
+     document.getElementById('endCallBtn').style.display='block';
+   });
+   activeCall=call;
+ }catch(e){alert(e.message)}
+}
+function endCall(){
+ if(activeCall) activeCall.close();
+ document.getElementById('remoteAudio').srcObject=null;
+ document.getElementById('callStatus').innerText='✅ Call ended';
+ document.getElementById('endCallBtn').style.display='none';
+}
+function copyChairId(){
+ const id=document.getElementById('chairPeerId').innerText;
+ navigator.clipboard.writeText(id).then(()=>alert('Chairman ID copied!'));
+}
+async function loadOnline(){
+ try{
+  const {data}=await sb.from('online_users').select('*').order('last_seen',{ascending:false}).limit(30);
+  if(!data || data.length===0){document.getElementById('onlineList').innerHTML='No workers online - share user link';return;}
+  let html='';
+  data.forEach(u=>{
+    const mins=Math.floor((Date.now()-new Date(u.last_seen).getTime())/60000);
+    const online = mins<3 && u.is_online;
+    const dot=online?'🟢':'⚪';
+    const color=online?'#2ed573':'#888';
+    html+=`<div class="online-row" style="border-left:4px solid ${color}"><div><b>${u.user_name}</b><br><span style="font-size:10px;color:${color}">${dot} ${online?'Online now':mins+'m ago'}</span></div><div style="display:flex;gap:4px">${online?`<button class="btn btn-green" onclick="callWorker('${u.peer_id}','${u.user_name}')">📞 Call</button>`:''}<button class="btn btn-blue" onclick="window.open('https://wa.me/?text=${encodeURIComponent('Oga '+u.user_name+', Chairman dey call you for Ademi: '+window.location.href)}')">💬 WA</button></div></div>`;
+  });
+  document.getElementById('onlineList').innerHTML=html;
+ }catch(e){document.getElementById('onlineList').innerHTML='Create online_users table first (see user app)';}
+}
+initChairPeer();
+setInterval(loadOnline,15000);
 
 async function saveAnnounce(){
 const text=document.getElementById('announceText').value.trim();
@@ -99,7 +184,6 @@ return `<div class="card" id="card-${v.id}">
 <div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)}</span></div>
 <button class="playBtn" onclick="document.getElementById('a${v.id}').play()">▶️ Play</button>
 </div>
-
 <div class="acctBox">
 <div style="font-size:10px;color:#f1c40f;font-weight:900">💳 ACCOUNT TO PAY - BIG</div>
 <div><span style="font-size:10px;color:#aaa">NAME:</span> <b style="font-size:14px;color:#fff">${accName}</b></div>
@@ -110,7 +194,6 @@ return `<div class="card" id="card-${v.id}">
 <button class="btn btn-red" style="flex:1" onclick="deleteVoice('${v.id}')">🗑️ DELETE</button>
 </div>
 </div>
-
 <audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
 <div style="display:flex;gap:4px;margin-top:8px">
 <input id="adj-${v.id}" type="number" value="${secs}" style="width:55px;border:2px solid #f1c40f;text-align:center">
@@ -141,16 +224,12 @@ const fg=parseInt(document.getElementById('fg-'+id).value)||0;const bad=parseInt
 document.getElementById('calc-'+id).innerHTML=approved>0?`ORIG ${orig}s | GOOD ${approved}s = ₦${(approved*RATE).toFixed(2)} | BAD ${bad}s comot`:'Fill boxes';
 }
 function copyText(t){navigator.clipboard.writeText(t);alert('Copied: '+t);}
-
-// DELETE FUNCTION - THIS IS WHAT YOU ASK
 async function deleteVoice(id){
 if(!confirm('DELETE this voice permanently? E go comot forever o!')) return;
 const {error}=await sb.from('voices').delete().eq('id',id);
 if(error) alert('❌ '+error.message);
 else{alert('✅ Deleted forever');load();}
 }
-
-// PAID + SAVE TO HISTORY
 async function markPaid(id, name, accName, accNo, bank, amount){
 if(!confirm(`You don pay ${name} - ₦${amount}?\nMove to PAID HISTORY?`)) return;
 try{
@@ -161,7 +240,6 @@ localStorage.setItem('chairman_paid_history', JSON.stringify(hist));
 try{await sb.from('voices').update({is_paid:true, paid_at:new Date().toISOString()}).eq('id',id);}catch(e){await sb.from('voices').update({is_paid:true}).eq('id',id);}
 alert('✅ Saved to PAID ✅ tab');load();
 }
-
 async function approve(id,secs){await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:secs}).eq('id',id);load();}
 async function adjust(id){const val=parseInt(document.getElementById('adj-'+id).value);if(val<=0)return alert('Put secs');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:val}).eq('id',id);load();}
 async function approveMiddle(id,orig){const fg=parseInt(document.getElementById('fg-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const approved=fg+sg;if(approved<=0)return alert('Fill boxes');await sb.from('voices').update({status:'QUALIFIED',approved_duration_seconds:approved,inspector_note:`MIDDLE CUT ${approved}s BAD ${bad}s removed`}).eq('id',id);load();}
