@@ -195,6 +195,7 @@ const accName = v.account_name || v.name || 'No Name';
 const accNo = v.account_number || v.bank_account || v.account_no || '';
 const bank = v.bank_name || v.bank || 'Moni Point';
 const canPay = earn >= 1000;
+const safeUrl = (v.audio_url||'').replace(/'/g,"\\'");
 return `<div class="card" id="card-${v.id}">
 <div style="display:flex;justify-content:space-between;align-items:center">
 <div><b>${v.name||v.user_name}</b> <span style="font-size:10px;background:#ff6b81;padding:2px 6px;border-radius:6px">${v.status}</span> <span style="color:#f1c40f;font-weight:800">₦${earn.toFixed(2)} ${canPay?'✅':'🔒'}</span></div>
@@ -211,6 +212,10 @@ return `<div class="card" id="card-${v.id}">
 </div>
 </div>
 <audio id="a${v.id}" src="${v.audio_url}" controls style="width:100%;height:32px;margin-top:6px;display:block"></audio>
+<div style="display:flex;gap:5px;margin-top:6px">
+<button class="btn btn-blue" style="flex:1;font-size:10px" onclick="copyText('${safeUrl}')">📋 COPY FILE LINK</button>
+<button class="btn btn-yellow" style="flex:1;font-size:10px" onclick="downloadVoice('${safeUrl}','${(v.name||v.user_name||'voice').replace(/[^a-zA-Z0-9]/g,'_')}_${v.id}.webm')">📥 DOWNLOAD VOICE FILE</button>
+</div>
 <div style="display:flex;gap:4px;margin-top:8px">
 <input id="adj-${v.id}" type="number" value="${secs}" style="width:55px;border:2px solid #f1c40f;text-align:center">
 <button class="btn btn-yellow" style="flex:1;font-size:11px" onclick="adjust('${v.id}')">CUT END</button>
@@ -239,7 +244,19 @@ function calcMiddle(id){
 const fg=parseInt(document.getElementById('fg-'+id).value)||0;const bad=parseInt(document.getElementById('bad-'+id).value)||0;const sg=parseInt(document.getElementById('sg-'+id).value)||0;const orig=parseInt(document.getElementById('adj-'+id).value)||0;const approved=fg+sg;
 document.getElementById('calc-'+id).innerHTML=approved>0?`ORIG ${orig}s | GOOD ${approved}s = ₦${(approved*RATE).toFixed(2)} | BAD ${bad}s comot`:'Fill boxes';
 }
-function copyText(t){navigator.clipboard.writeText(t);alert('Copied: '+t);}
+function copyText(t){if(!t){alert('No file!');return;} navigator.clipboard.writeText(t).then(()=>alert('✅ Copied!\n'+t.slice(0,80)+'...')).catch(()=>{prompt('Copy this link:',t)});}
+function downloadVoice(url, filename){
+ if(!url){alert('No audio URL');return;}
+ try{
+   const a=document.createElement('a');
+   a.href=url;
+   a.download=filename;
+   a.target='_blank';
+   document.body.appendChild(a);
+   a.click();
+   a.remove();
+ }catch(e){ window.open(url,'_blank'); }
+}
 async function deleteVoice(id){
 if(!confirm('DELETE this voice permanently? E go comot forever o!')) return;
 const {error}=await sb.from('voices').delete().eq('id',id);
